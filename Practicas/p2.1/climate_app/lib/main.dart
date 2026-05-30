@@ -44,7 +44,7 @@ class MyHomePage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Zacatecas',
+              'Hola TU',
               style: TextStyle(
                 fontSize: 24,
                 color: Colors.grey,
