@@ -1,17 +1,20 @@
-# climate_app
+# Climate App
 
-A new Flutter project.
+**Autor:** Israel Gómez Bonilla
+**Carrera:** Ingeniería en Desarrollo de Software (UTEQ)
 
-## Getting Started
+## ¿Qué es esta app?
+Aplicación base desarrollada en Flutter para la Práctica 2.1.El objetivo a futuro de la app es mostrar el clima en teléfono y wearable.
 
-This project is a starting point for a Flutter application.
+## ¿Cómo ejecutarla? (Setup)
+Para poder correr este proyecto de manera local, sigue estos pasos:
 
-A few resources to get you started if this is your first Flutter project:
+1. Asegúrate de tener un dispositivo conectado con depuración USB o un emulador de Android Studio activo.
+2. Descarga las dependencias del proyecto ejecutando: `flutter pub get`
+3. Ejecuta la aplicación con el comando:`flutter run`
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Resultado esperado
+Al compilar exitosamente, se mostrará en pantalla la interfaz base de Flutter, la cual incluye:
+* Una AppBar en la parte superior.
+* Un botón flotante (FAB) con el ícono de suma (+) en la esquina inferior derecha
+* Un contador funcional en el centro de la pantalla que aumenta al presionar el botón.
