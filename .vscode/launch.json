@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Ejecutar climate_app",
-            "cwd": "Practicas\\p2.1\\climate_app",
+            "cwd": "Practicas\\climate_app",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart"
