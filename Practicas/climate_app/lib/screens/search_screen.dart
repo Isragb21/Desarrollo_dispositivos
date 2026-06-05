@@ -9,20 +9,21 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  // Lista original de ciudades
-  final List<String> _cities = ['Santiago', 'Querétaro', 'México'];
-  
-  
+  final List<String> _cities = [
+    'Santiago',
+    'Querétaro',
+    'México',
+    'Guadalajara',
+  ];
+
   List<String> _filteredCities = [];
 
   @override
   void initState() {
     super.initState();
-
     _filteredCities = _cities;
   }
 
-  // Función que se ejecuta cada que escribes en el TextField
   void _filterCities(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -52,26 +53,28 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: _filteredCities.length,
-              itemBuilder: (context, index) {
-                final city = _filteredCities[index];
-                return ListTile(
-                  leading: const Icon(Icons.location_city),
-                  title: Text(city),
-                  subtitle: const Text('24°C'),
-                  onTap: () {
-                    // Navegación hacia la pantalla de detalle
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailScreen(city: city),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            child: _filteredCities.isEmpty
+                ? const Center(child: Text('No encontradas'))
+                : ListView.builder(
+                    itemCount: _filteredCities.length,
+                    itemBuilder: (context, index) {
+                      final city = _filteredCities[index];
+                      // Tu ListTile intacto
+                      return ListTile(
+                        leading: const Icon(Icons.location_city),
+                        title: Text(city),
+                        subtitle: const Text('24°C'),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailScreen(city: city),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),

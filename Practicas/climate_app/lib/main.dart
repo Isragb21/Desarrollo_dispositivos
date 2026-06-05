@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
+import 'providers/weather_provider.dart';
 import 'screens/home_screen.dart';
 
 void main() {
-  runApp(
-    // ProviderScope para habilitar Riverpod
-    const ProviderScope(child: MyApp()),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -14,10 +12,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Climate App',
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const HomeScreen(),
+    return MultiProvider(
+      // Usamos Provider en lugar de Riverpod
+      providers: [
+        ChangeNotifierProvider(create: (context) => WeatherProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Climate App',
+        theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+        home: const HomeScreen(),
+      ),
     );
   }
 }

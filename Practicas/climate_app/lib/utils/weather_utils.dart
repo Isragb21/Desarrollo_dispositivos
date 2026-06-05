@@ -1,19 +1,32 @@
-import 'package:flutter/material.dart';
+class WeatherUtils {
+  // Convierte Celsius a Fahrenheit
+  static double celsiusToFahrenheit(int celsius) {
+    return (celsius * 9 / 5) + 32;
+  }
 
-// Función pura: Formatea la temperatura
-String formatTemperature(double temp, String unit) {
-  return '${temp.toInt()}°$unit';
-}
+  // Convierte Fahrenheit a Celsius
+  static int fahrenheitToCelsius(double fahrenheit) {
+    return ((fahrenheit - 32) * 5 / 9).toInt();
+  }
 
-// Función pura: Devuelve el icono correcto según la condición
-IconData getWeatherIcon(String condition) {
-  switch (condition.toLowerCase()) {
-    case 'sunny':
-      return Icons.wb_sunny;
-    case 'rainy':
-      return Icons.water_drop;
-    case 'cloudy':
-    default:
-      return Icons.cloud;
+  // Obtiene ícono según condición
+  static String getWeatherIcon(String condition) {
+    switch (condition.toLowerCase()) {
+      case 'sunny':
+        return '☀️';
+      case 'cloudy':
+        return '☁️';
+      case 'rainy':
+        return '🌧️';
+      case 'snowy':
+        return '❄️';
+      default:
+        return '❓';
+    }
+  }
+
+  // Valida temperatura (está en rango válido)
+  static bool isValidTemperature(int temp) {
+    return temp >= -50 && temp <= 60;
   }
 }
