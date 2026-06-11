@@ -42,6 +42,6 @@ class Weather {
 
   @override
   String toString() {
-    return 'Weather(city: $city, temp: ${temperature}°C, condition: $condition, humidity: $humidity%)';
+    return 'Weather(city: $city, temp: $temperature°C, condition: $condition, humidity: $humidity%)';
   }
 }
