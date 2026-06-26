@@ -12,14 +12,27 @@ class WeatherUtils {
   // Obtiene ícono según condición
   static String getWeatherIcon(String condition) {
     switch (condition.toLowerCase()) {
-      case 'sunny':
+      case 'clear':
         return '☀️';
-      case 'cloudy':
+      case 'clouds':
         return '☁️';
-      case 'rainy':
+      case 'rain':
+      case 'drizzle':
         return '🌧️';
-      case 'snowy':
+      case 'thunderstorm':
+        return '⛈️';
+      case 'snow':
         return '❄️';
+      case 'mist':
+      case 'smoke':
+      case 'haze':
+      case 'dust':
+      case 'fog':
+      case 'sand':
+      case 'ash':
+      case 'squall':
+      case 'tornado':
+        return '🌫️';
       default:
         return '❓';
     }

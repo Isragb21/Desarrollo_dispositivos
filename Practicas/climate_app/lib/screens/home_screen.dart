@@ -13,18 +13,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<WeatherProvider>(
-        context,
-        listen: false,
-      ).loadWeather('Santiago de Querétaro');
+      Provider.of<WeatherProvider>(context, listen: false)
+          .fetchWeather('Queretaro');
     });
   }
 
-  // Abre un modal con la lista de dispositivos Bluetooth encontrados
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _showBLEModal(BuildContext context, WeatherProvider provider) {
     bool scanStarted = false;
 
@@ -33,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
             if (!scanStarted) {
               scanStarted = true;
               WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -41,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (mounted) setModalState(() {});
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    scaffoldMessenger.showSnackBar(
                       SnackBar(
                         content: Text(
                           'No se pudo iniciar el escaneo Bluetooth: $e',
@@ -99,11 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           final advName = scanResult.advertisementData.advName
                               .trim();
                           final platformName = device.platformName.trim();
-                          final fallbackName = device.advName.trim().isNotEmpty
-                              ? device.advName.trim()
-                              : platformName.isNotEmpty
-                              ? platformName
-                              : null;
+                          final fallbackName =
+                              device.advName.trim().isNotEmpty
+                                  ? device.advName.trim()
+                                  : platformName.isNotEmpty
+                                      ? platformName
+                                      : null;
                           final deviceName =
                               fallbackName ??
                               'Dispositivo ${device.remoteId.str}';
@@ -118,26 +125,24 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             onTap: () async {
                               final navigator = Navigator.of(context);
-                              final messenger = ScaffoldMessenger.of(context);
+                              final messenger =
+                                  ScaffoldMessenger.of(context);
 
-                              navigator.pop(); // Cierra el modal
+                              navigator.pop();
 
-                              // Muestra indicador visual de que está conectando
                               messenger.showSnackBar(
-                                const SnackBar(content: Text('Conectando...')),
+                                const SnackBar(
+                                    content: Text('Conectando...')),
                               );
 
                               try {
-                                // Se conecta al dispositivo
                                 await provider.bleService.connect(device);
 
-                                // Lee la característica GATT
-                                final bleError = await provider
-                                    .loadWeatherFromBLE(device);
+                                final bleError =
+                                    await provider.loadWeatherFromBLE(device);
 
                                 if (!mounted) return;
 
-                                // AQUÍ ESTÁ LA MAGIA DE LOS LETREROS (VERDE / ROJO)
                                 if (bleError == null) {
                                   messenger.showSnackBar(
                                     const SnackBar(
@@ -158,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   );
                                 }
 
-                                // Escucha el estado para manejar la desconexión
                                 provider.bleService
                                     .getConnectionState(device)
                                     .listen((state) {
@@ -212,21 +216,80 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(title: const Text('Clima Actual'), centerTitle: true),
       body: Consumer<WeatherProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (provider.weather == null) {
-            return const Center(child: Text('Sin datos'));
-          }
-
-          return Center(
-            child: isLandscape
-                ? _buildLandscapeLayout(context, provider)
-                : _buildPortraitLayout(context, provider),
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'Buscar ciudad',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () {
+                        final city = _searchController.text.trim();
+                        if (city.isNotEmpty) {
+                          provider.fetchWeather(city);
+                        }
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onSubmitted: (value) {
+                    final city = value.trim();
+                    if (city.isNotEmpty) {
+                      provider.fetchWeather(city);
+                    }
+                  },
+                ),
+              ),
+              Expanded(
+                child: _buildBody(provider, isLandscape),
+              ),
+            ],
           );
         },
       ),
     );
+  }
+
+  Widget _buildBody(WeatherProvider provider, bool isLandscape) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              provider.errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                provider.fetchWeather('Queretaro');
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (provider.weather == null) {
+      return const Center(child: Text('Busca una ciudad para ver el clima'));
+    }
+
+    return isLandscape
+        ? _buildLandscapeLayout(context, provider)
+        : _buildPortraitLayout(context, provider);
   }
 
   Widget _buildPortraitLayout(BuildContext context, WeatherProvider provider) {
@@ -235,68 +298,95 @@ class _HomeScreenState extends State<HomeScreen> {
         ? weather.temperature
         : WeatherUtils.celsiusToFahrenheit(weather.temperature).toInt();
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return ListView(
       children: [
+        const SizedBox(height: 32),
         Text(
           '$displayTemp${provider.temperatureUnit}',
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 72,
             fontWeight: FontWeight.bold,
             color: Colors.blue,
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          weather.description,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 18, color: Colors.grey),
+        ),
         const SizedBox(height: 16),
-        Text(weather.city, style: const TextStyle(fontSize: 24)),
+        Text(
+          weather.city,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 24),
+        ),
         const SizedBox(height: 32),
         Text(
           WeatherUtils.getWeatherIcon(weather.condition),
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 120),
         ),
         const SizedBox(height: 32),
-        Text('Humedad: ${weather.humidity}% | Viento: 12 km/h'),
+        Text(
+          'Humedad: ${weather.humidity}% | Viento: ${weather.windSpeed} m/s',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16),
+        ),
         const SizedBox(height: 40),
-
-        // Botón para buscar dispositivos
-        ElevatedButton.icon(
-          onPressed: () async {
-            final enabled = await provider.bleService.ensureBluetoothEnabled();
-            if (!mounted) return;
-            if (!enabled) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Activa Bluetooth para buscar dispositivos'),
-                ),
-              );
-              return;
-            }
-            _showBLEModal(context, provider);
-          },
-          icon: const Icon(Icons.bluetooth_searching),
-          label: const Text('Buscar dispositivos'),
-        ),
-        const SizedBox(height: 10),
-
-        _buildSearchButton(context),
-        const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () {
-            provider.loadWeather('Monterrey');
-          },
-          child: const Text('Actualizar'),
-        ),
-        const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () {
-            provider.toggleTemperatureUnit();
-          },
-          child: const Text('Cambiar unidad (°C / °F)'),
+        Center(
+          child: Column(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final enabled =
+                      await provider.bleService.ensureBluetoothEnabled();
+                  if (!mounted) return;
+                  if (!enabled) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Activa Bluetooth para buscar dispositivos',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  _showBLEModal(context, provider);
+                },
+                icon: const Icon(Icons.bluetooth_searching),
+                label: const Text('Buscar dispositivos'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SearchScreen(),
+                    ),
+                  );
+                },
+                child: const Text('Buscar Ciudades'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  provider.toggleTemperatureUnit();
+                },
+                child: const Text('Cambiar unidad (°C / °F)'),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildLandscapeLayout(BuildContext context, WeatherProvider provider) {
+  Widget _buildLandscapeLayout(
+      BuildContext context, WeatherProvider provider) {
     final weather = provider.weather!;
     final displayTemp = provider.temperatureUnit == '°C'
         ? weather.temperature
@@ -316,6 +406,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.blue,
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              weather.description,
+              style: const TextStyle(fontSize: 18, color: Colors.grey),
+            ),
             const SizedBox(height: 16),
             Text(weather.city, style: const TextStyle(fontSize: 24)),
           ],
@@ -328,17 +423,18 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(fontSize: 120),
             ),
             const SizedBox(height: 16),
-            Text('Humedad: ${weather.humidity}% | Viento: 12 km/h'),
+            Text(
+              'Humedad: ${weather.humidity}% | Viento: ${weather.windSpeed} m/s',
+            ),
             const SizedBox(height: 20),
-
-            // Botón para buscar dispositivos Bluetooth
             ElevatedButton.icon(
               onPressed: () async {
-                final enabled = await provider.bleService
-                    .ensureBluetoothEnabled();
+                final messenger = ScaffoldMessenger.of(context);
+                final enabled =
+                    await provider.bleService.ensureBluetoothEnabled();
                 if (!mounted) return;
                 if (!enabled) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text(
                         'Activa Bluetooth para buscar dispositivos',
@@ -353,14 +449,16 @@ class _HomeScreenState extends State<HomeScreen> {
               label: const Text('Buscar dispositivos'),
             ),
             const SizedBox(height: 10),
-
-            _buildSearchButton(context),
-            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
-                provider.loadWeather('Monterrey');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SearchScreen(),
+                  ),
+                );
               },
-              child: const Text('Probar Cambio de Estado'),
+              child: const Text('Buscar Ciudades'),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
@@ -372,18 +470,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildSearchButton(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchScreen()),
-        );
-      },
-      child: const Text('Buscar Ciudades'),
     );
   }
 }

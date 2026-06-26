@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/weather_model.dart';
 import '../services/ble_service.dart';
+import '../services/weather_service.dart';
 
 class WeatherProvider extends ChangeNotifier {
   Weather? _weather;
@@ -9,13 +10,30 @@ class WeatherProvider extends ChangeNotifier {
   String? _errorMessage;
   int _tempUnit = 0;
 
-  // Instancia del servicio BLE
   final BLEService bleService = BLEService();
+  final WeatherService weatherService = WeatherService();
 
   Weather? get weather => _weather;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get temperatureUnit => _tempUnit == 0 ? '°C' : '°F';
+
+  Future<void> fetchWeather(String city) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _weather = await weatherService.getWeather(city);
+    } on Exception catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+    } catch (e) {
+      _errorMessage = 'Unexpected error: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> loadWeather(String city) async {
     _isLoading = true;
@@ -24,12 +42,13 @@ class WeatherProvider extends ChangeNotifier {
 
     try {
       await Future.delayed(const Duration(seconds: 1));
-
       _weather = Weather(
         city: city,
         temperature: 24,
         condition: 'cloudy',
+        description: 'nublado',
         humidity: 65,
+        windSpeed: 12.0,
       );
     } catch (e) {
       _errorMessage = 'Error loading weather: $e';
@@ -39,16 +58,13 @@ class WeatherProvider extends ChangeNotifier {
     }
   }
 
-  // Lee los datos del wearable por BLE
   Future<String?> loadWeatherFromBLE(BluetoothDevice device) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // UUID a leer en LightBlue
       const targetUuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
-
       final data = await bleService.readWeatherCharacteristic(
         device,
         targetUuid,
@@ -59,7 +75,9 @@ class WeatherProvider extends ChangeNotifier {
           city: data['city'] ?? 'Reloj BLE',
           temperature: data['temperature'] ?? 0,
           condition: data['condition'] ?? 'sunny',
+          description: data['description'] ?? '',
           humidity: data['humidity'] ?? 50,
+          windSpeed: (data['windSpeed'] as num?)?.toDouble() ?? 0.0,
         );
         return null;
       }
@@ -84,7 +102,9 @@ class WeatherProvider extends ChangeNotifier {
         city: _weather!.city,
         temperature: newTemp,
         condition: _weather!.condition,
+        description: _weather!.description,
         humidity: _weather!.humidity,
+        windSpeed: _weather!.windSpeed,
       );
       notifyListeners();
     }
