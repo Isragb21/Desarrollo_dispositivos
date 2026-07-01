@@ -1,0 +1,38 @@
+# Flutter
+**/build/
+**/.dart_tool/
+**/.packages
+**/.pub/
+**/pubspec.lock
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Android
+**/local.properties
+**/.gradle/
+**/*.iml
+**/gradle/
+**/gradlew
+**/gradlew.bat
+**/gradle-wrapper.jar
+
+# Windows
+**/windows/runner/Debug/
+**/windows/out/
+**/*.exe
+**/*.msi
+**/*.dll
+
+# IDE
+**/.idea/
+**/*.swp
+**/*.swo
+*~
+
+# OS
+**/Thumbs.db
+**/Desktop.ini
+**/.DS_Store
+
+# Logs
+**/*.log
