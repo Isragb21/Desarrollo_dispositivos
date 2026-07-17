@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
 
 class NativeBleServer {
@@ -6,8 +7,11 @@ class NativeBleServer {
   Future<bool> start() async {
     try {
       final result = await _channel.invokeMethod<bool>('startServer');
-      return result ?? false;
+      final success = result ?? false;
+      developer.log('BLE server start: $success', name: '[WEARABLE]');
+      return success;
     } catch (e) {
+      developer.log('BLE server start error: $e', name: '[WEARABLE]');
       return false;
     }
   }
@@ -15,6 +19,7 @@ class NativeBleServer {
   Future<void> stop() async {
     try {
       await _channel.invokeMethod('stopServer');
+      developer.log('BLE server stopped', name: '[WEARABLE]');
     } catch (_) {}
   }
 

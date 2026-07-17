@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'ble_server.dart';
@@ -144,13 +145,19 @@ class _WearableScreenState extends State<WearableScreen> {
   }
 
   Future<void> _initBle() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    var started = await _bleServer.start();
-    if (!started) {
-      await Future.delayed(const Duration(seconds: 3));
-      started = await _bleServer.start();
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+      var started = await _bleServer.start();
+      if (!started) {
+        developer.log('BLE start failed, retrying in 3s...', name: '[WEARABLE]');
+        await Future.delayed(const Duration(seconds: 3));
+        started = await _bleServer.start();
+      }
+      if (mounted) setState(() => _isTransmitting = started);
+    } catch (e) {
+      developer.log('BLE init error: $e', name: '[WEARABLE]');
+      if (mounted) setState(() => _isTransmitting = false);
     }
-    if (mounted) setState(() => _isTransmitting = started);
   }
 
   @override

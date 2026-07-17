@@ -10,6 +10,10 @@ import android.os.ParcelUuid
 import java.util.*
 
 class GattServerHelper(private val context: Context) {
+    companion object {
+        private val CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    }
+
     private val serviceUUID = UUID.fromString("12345678-1234-1234-1234-123456789abc")
     private val stepsUUID = UUID.fromString("aaaaaaaa-0001-1234-1234-123456789abc")
     private val hrUUID = UUID.fromString("aaaaaaaa-0002-1234-1234-123456789abc")
@@ -46,10 +50,14 @@ class GattServerHelper(private val context: Context) {
             if (device == null) return
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    if (!connectedDevices.contains(device)) connectedDevices.add(device)
+                    if (!connectedDevices.contains(device)) {
+                        connectedDevices.add(device)
+                        android.util.Log.d("[WEARABLE]", "Device connected: ${device.address}")
+                    }
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     connectedDevices.remove(device)
+                    android.util.Log.d("[WEARABLE]", "Device disconnected: ${device.address}")
                 }
             }
         }
@@ -66,52 +74,70 @@ class GattServerHelper(private val context: Context) {
     }
 
     fun start(): Boolean {
-        val pm = context.packageManager
-        if (!pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_BLUETOOTH_LE)) return false
+        return try {
+            val pm = context.packageManager
+            if (!pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_BLUETOOTH_LE)) {
+                android.util.Log.e("[WEARABLE]", "Device does not support BLE")
+                return false
+            }
 
-        bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager?.adapter ?: return false
-        bluetoothLeAdvertiser = bluetoothAdapter?.bluetoothLeAdvertiser ?: return false
+            bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            bluetoothAdapter = bluetoothManager?.adapter
+            if (bluetoothAdapter == null) {
+                android.util.Log.e("[WEARABLE]", "Bluetooth adapter not available")
+                return false
+            }
+            bluetoothLeAdvertiser = bluetoothAdapter?.bluetoothLeAdvertiser
+            if (bluetoothLeAdvertiser == null) {
+                android.util.Log.e("[WEARABLE]", "BLE advertiser not available")
+                return false
+            }
 
-        val service = BluetoothGattService(serviceUUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            val service = BluetoothGattService(serviceUUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
-        stepsChar = BluetoothGattCharacteristic(
-            stepsUUID, 
+            stepsChar = createCharacteristic(stepsUUID, intToBytes(0, 4))
+            service.addCharacteristic(stepsChar)
+
+            hrChar = createCharacteristic(hrUUID, byteArrayOf(70))
+            service.addCharacteristic(hrChar)
+
+            calChar = createCharacteristic(calUUID, intToBytes(0, 2))
+            service.addCharacteristic(calChar)
+
+            statusChar = createCharacteristic(statusUUID, "reposo".toByteArray())
+            service.addCharacteristic(statusChar)
+
+            gattServer = bluetoothManager?.openGattServer(context, gattServerCallback)
+            if (gattServer == null) {
+                android.util.Log.e("[WEARABLE]", "Failed to open GATT server")
+                return false
+            }
+            gattServer?.addService(service)
+
+            startAdvertising()
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("[WEARABLE]", "Error starting BLE server", e)
+            false
+        }
+    }
+
+    private fun createCharacteristic(uuid: UUID, initialValue: ByteArray): BluetoothGattCharacteristic {
+        val char = BluetoothGattCharacteristic(
+            uuid,
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
             BluetoothGattCharacteristic.PERMISSION_READ
         )
-        stepsChar?.value = intToBytes(0, 4)
-        service.addCharacteristic(stepsChar)
+        char.value = initialValue
 
-        hrChar = BluetoothGattCharacteristic(
-            hrUUID,
-            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-            BluetoothGattCharacteristic.PERMISSION_READ
+        val cccd = BluetoothGattDescriptor(
+            CCCD_UUID,
+            BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
         )
-        hrChar?.value = byteArrayOf(70)
-        service.addCharacteristic(hrChar)
+        cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+        char.addDescriptor(cccd)
 
-        calChar = BluetoothGattCharacteristic(
-            calUUID,
-            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-            BluetoothGattCharacteristic.PERMISSION_READ
-        )
-        calChar?.value = intToBytes(0, 2)
-        service.addCharacteristic(calChar)
-
-        statusChar = BluetoothGattCharacteristic(
-            statusUUID,
-            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-            BluetoothGattCharacteristic.PERMISSION_READ
-        )
-        statusChar?.value = "reposo".toByteArray()
-        service.addCharacteristic(statusChar)
-
-        gattServer = bluetoothManager?.openGattServer(context, gattServerCallback)
-        gattServer?.addService(service)
-
-        startAdvertising()
-        return true
+        return char
     }
 
     private fun startAdvertising() {
@@ -123,6 +149,7 @@ class GattServerHelper(private val context: Context) {
 
         val data = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
+            .addServiceUuid(ParcelUuid(serviceUUID))
             .build()
 
         val scanResponse = AdvertiseData.Builder()
@@ -163,7 +190,11 @@ class GattServerHelper(private val context: Context) {
     private fun notifyCharacteristic(char: BluetoothGattCharacteristic?) {
         char ?: return
         for (device in connectedDevices) {
-            gattServer?.notifyCharacteristicChanged(device, char, false)
+            try {
+                gattServer?.notifyCharacteristicChanged(device, char, false)
+            } catch (e: Exception) {
+                android.util.Log.e("[WEARABLE]", "Error notifying ${char.uuid}", e)
+            }
         }
     }
 

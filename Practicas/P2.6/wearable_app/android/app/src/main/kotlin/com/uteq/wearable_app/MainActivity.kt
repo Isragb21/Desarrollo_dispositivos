@@ -61,15 +61,26 @@ class MainActivity : FlutterActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 100) {
             pendingResult?.let { result ->
-                result.success(startBleServer())
+                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+                if (allGranted) {
+                    result.success(startBleServer())
+                } else {
+                    android.util.Log.w("[WEARABLE]", "BLE permissions denied by user")
+                    result.success(false)
+                }
                 pendingResult = null
             }
         }
     }
 
     private fun startBleServer(): Boolean {
-        gattServerHelper = GattServerHelper(this)
-        return gattServerHelper?.start() ?: false
+        return try {
+            gattServerHelper = GattServerHelper(this)
+            gattServerHelper?.start() ?: false
+        } catch (e: Exception) {
+            android.util.Log.e("[WEARABLE]", "Failed to start BLE server", e)
+            false
+        }
     }
 
     private fun stopBleServer() {
@@ -80,7 +91,8 @@ class MainActivity : FlutterActivity() {
     private fun hasBlePermissions(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED &&
-                   ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                   ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                   ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
         }
         return true
     }
@@ -92,8 +104,7 @@ class MainActivity : FlutterActivity() {
                 arrayOf(
                     Manifest.permission.BLUETOOTH_ADVERTISE,
                     Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.BLUETOOTH_SCAN,
-                    Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission.BLUETOOTH_SCAN
                 ),
                 100
             )
