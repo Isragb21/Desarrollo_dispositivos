@@ -1,0 +1,102 @@
+/* ── Reset TV ────────────────────────────────────────────── */
+*, *::before, *::after {
+ box-sizing: border-box;
+ margin: 0; padding: 0;
+}
+:root {
+ /* Tipografía 10-foot: mínimo 48px para datos primarios */
+ --fs-temperature: 5rem; /* 80px — dato principal */
+ --fs-city: 2rem; /* 32px — nombre ciudad */
+ --fs-condition: 1.5rem; /* 24px — condición */
+ --fs-details: 1.25rem; /* 20px — detalles */
+ --fs-header: 1.75rem; /* 28px — header */
+ /* Safe zone 5% */
+ --safe-v: 54px; /* 5% de 1080 */
+ --safe-h: 96px; /* 5% de 1920 */
+ /* Colores */
+ --color-focus: #FFD700; /* dorado — foco visible */
+ --color-bg: rgba(0,0,0,0.12);
+ --color-card: rgba(255,255,255,0.05);
+ --color-text: #FFFFFF;
+ --color-detail: rgba(255,255,255,0.8);
+}
+/* ── Layout base TV ────────────────────────────────────── */
+html, body {
+ width: 100vw;
+ height: 100vh;
+ overflow: hidden; /* SIN scroll — todo visible */
+ background: transparent;
+ color: var(--color-text);
+ font-family: 'Segoe UI', Arial, sans-serif;
+}
+/* ── Video de fondo ────────────────────────────────────── */
+#bgVideo {
+ position: fixed;
+ top: 0; left: 0;
+ width: 100%; height: 100%;
+ object-fit: cover;
+ z-index: -1;
+}
+.overlay {
+ position: fixed;
+ inset: 0;
+ background: rgba(0, 0, 0, 0.12);
+ z-index: 0;
+}
+#app {
+  position: relative;
+  z-index: 10;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+/* ── Header ─────────────────────────────────────────────── */
+.tv-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 2vh 3vw;
+ font-size: var(--fs-header);
+ font-weight: 600;
+ letter-spacing: 0.05em;
+ text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+/* ── Grid de ciudades (Forzado a 2x2) ───────────────────── */
+.cities-grid {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ grid-template-rows: 1fr 1fr;
+ gap: 20px;
+ padding: 0 3vw 2vh 3vw;
+ height: 85vh;
+}
+/* ── Tarjeta ciudad (original transparente) ─────────────── */
+.city-card {
+ background: var(--color-card);
+ backdrop-filter: blur(10px);
+ border: 1px solid rgba(255,255,255,0.12);
+ border-radius: 20px;
+ padding: 20px;
+ display: flex;
+ flex-direction: column;
+ justify-content: center;
+ gap: 8px;
+ cursor: pointer;
+ transition: transform 0.15s ease, border-color 0.15s ease, background 0.2s ease;
+ outline: none;
+ opacity: 1 !important; /* Forzar visibilidad */
+ box-shadow: none;
+}
+/* ── Estado de foco D-pad ───────────────────────────────── */
+.city-card.focused {
+ border-color: var(--color-focus);
+ box-shadow: 0 0 0 2px rgba(255,215,0,0.35);
+ transform: scale(1.02);
+ background: rgba(255,255,255,0.1);
+}
+/* ── Tipografia de tarjeta ──────────────────────────────── */
+.city-name { font-size: var(--fs-city); font-weight: 700; }
+.temperature { font-size: var(--fs-temperature);font-weight: 800; line-height:1; }
+.condition { font-size: var(--fs-condition); font-weight: 500; }
+.details { font-size: var(--fs-details); color: var(--color-detail); }

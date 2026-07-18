@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+ <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <meta name="theme-color" content="#1a237e" />
+ <!-- PWA -->
+ <link rel="manifest" href="manifest.json" />
+ <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+ <!-- Content Security Policy -->
+ <meta http-equiv="Content-Security-Policy"
+ content="
+ default-src 'self';
+ script-src 'self';
+ style-src 'self' 'unsafe-inline';
+ img-src 'self' data: https://openweathermap.org;
+ media-src 'self';
+ connect-src 'self' https://api.openweathermap.org;
+ "
+ />
+ <title>Clima Smart TV</title>
+ <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+ <!-- Video de fondo (sin audio, loop automático) -->
+ <video id="bgVideo" autoplay muted loop playsinline
+ preload="auto" aria-hidden="true"
+ poster="assets/posters/clear.jpg">
+  <source src="/assets/videos/clear.mp4" type="video/mp4" />
+  <source src="/assets/videos/clear.webm" type="video/webm" />
+ <img src="assets/posters/clear.jpg" alt="" />
+ </video>
+ <!-- Overlay oscuro para contraste sobre el video -->
+ <div class="overlay"></div>
+ <!-- Header con ciudad y hora -->
+ <header class="tv-header">
+ <span id="cityName">Cargando...</span>
+ <span id="currentTime"></span>
+ </header>
+ <!-- Grid de 4 ciudades (2x2) -->
+ <main class="cities-grid" role="main">
+ <article class="city-card focused" id="card0" tabindex="0"
+ role="button" aria-label="Ciudad 1">
+ <h2 class="city-name">--</h2>
+ <p class="temperature">--°C</p>
+ <p class="condition">--</p>
+ <p class="details">Humedad: --% | Viento: -- m/s</p>
+ </article>
+ <article class="city-card" id="card1" tabindex="-1"
+ role="button" aria-label="Ciudad 2">
+ <h2 class="city-name">--</h2>
+ <p class="temperature">--°C</p>
+ <p class="condition">--</p>
+ <p class="details">Humedad: --% | Viento: -- m/s</p>
+ </article>
+ <article class="city-card" id="card2" tabindex="-1"
+ role="button" aria-label="Ciudad 3">
+ <h2 class="city-name">--</h2>
+ <p class="temperature">--°C</p>
+ <p class="condition">--</p>
+ <p class="details">Humedad: --% | Viento: -- m/s</p>
+ </article>
+ <article class="city-card" id="card3" tabindex="-1"
+ role="button" aria-label="Ciudad 4">
+ <h2 class="city-name">--</h2>
+ <p class="temperature">--°C</p>
+ <p class="condition">--</p>
+ <p class="details">Humedad: --% | Viento: -- m/s</p>
+ </article>
+ </main>
+ <script src="js/config.js"></script>
+ <script src="js/weather.js"></script>
+ <script src="js/navigation.js"></script>
+ <script src="js/app.js"></script>
+</body>
+</html>
