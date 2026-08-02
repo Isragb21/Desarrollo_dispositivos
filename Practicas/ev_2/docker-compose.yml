@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gamestore-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gamestore
+      POSTGRES_USER: gamestore
+      POSTGRES_PASSWORD: gamestore123
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    container_name: gamestore-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: gamestore
+      DB_USER: gamestore
+      DB_PASSWORD: gamestore123
+      PORT: 3000
+
+volumes:
+  pgdata:

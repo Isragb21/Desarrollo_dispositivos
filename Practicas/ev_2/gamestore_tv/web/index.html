@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="GameStore TV - PWA para Smart TV: catálogo de videojuegos, carrusel de destacados y tráilers.">
+
+  <meta name="theme-color" content="#0B0E14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="GameStoreTV">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="icons/Icon-192.png">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Content Security Policy (SA.2.A: CSP configurada) -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'wasm-unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' blob: data: http: https:;
+    media-src 'self' blob: http: https:;
+    font-src 'self' data:;
+    connect-src 'self' http: https: ws: wss:;
+    worker-src 'self' blob:;
+  ">
+
+  <title>GameStore TV</title>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Registro del Service Worker personalizado (Cache First / Network First)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').then(function (reg) {
+          console.log('[GameStoreTV] SW registrado:', reg.scope);
+        }).catch(function (err) {
+          console.error('[GameStoreTV] Error registrando SW:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
