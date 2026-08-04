@@ -13,8 +13,9 @@ cd ..
 docker compose up -d
 
 # 2) Correr la PWA TV en Chrome (modo dev)
+#    Mismo requisito que el build: --no-web-resources-cdn (CanvasKit local, CSP)
 cd gamestore_tv
-flutter run -d chrome
+flutter run -d chrome --no-web-resources-cdn
 
 # 3) Build de producción
 #    --no-web-resources-cdn: usa el CanvasKit LOCAL (build/web/canvaskit/)
