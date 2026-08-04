@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Archivos sensibles (SA.2.A - CRITICO: nunca en el repositorio)
+.env
+.env.*
+*.env
+*.jks
+*.keystore
+*.key
+*.pem
+secrets/
+
+# Logs y respaldos locales
+*.log
+backups/
+*.dump
+*.sql.gz
