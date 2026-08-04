@@ -17,13 +17,21 @@ cd gamestore_tv
 flutter run -d chrome
 
 # 3) Build de producción
-flutter build web
+#    --no-web-resources-cdn: usa el CanvasKit LOCAL (build/web/canvaskit/)
+#    en vez de gstatic.com. Es OBLIGATORIO por la CSP estricta `script-src 'self'`
+#    (sin dependencias externas) y para que funcione offline con el SW.
+flutter build web --no-web-resources-cdn
 
 # 4) Servir el build en 1920x1080 (Chrome DevTools -> emular Smart TV)
 cd build/web
 python -m http.server 8080
 ```
 Abrir `http://localhost:8080` en Chrome y emular resolución **1920x1080** en DevTools.
+
+> **Nota (pantalla en blanco):** si se hace `flutter build web` sin `--no-web-resources-cdn`,
+> el bootstrap intenta descargar `canvaskit.js` desde `https://www.gstatic.com/...` y la CSP lo
+> bloquea, dejando la app en blanco. El flag fuerza `useLocalCanvasKit: true` en
+> `flutter_bootstrap.js` y todo se carga localmente.
 
 ## Características implementadas
 - **PWA** (`web/`): `manifest.json` (`fullscreen`, `landscape`), íconos maskable 192/512, service worker `sw.js` (Cache First estáticos / Network First API / caché dedicada para videos), página offline, CSP en `index.html`.
@@ -60,6 +68,8 @@ gamestore_tv/
     ├── manifest.json              # fullscreen + landscape
     ├── index.html                 # CSP + registro SW
     ├── sw.js                      # Cache First / Network First / videos
+    ├── sw_register.js             # Registro del SW en script externo (CSP)
+    ├── flutter_config.js          # Configuración del engine (CanvasKit local)
     ├── offline.html               # Página offline
     ├── icons/                     # Íconos 192/512 maskable
     └── videos/                    # Tráilers H.264 faststart <= 5MB

@@ -5,9 +5,9 @@
  *  - OFFLINE      : navegaciones sirven index.html cacheado
  */
 
-const APP_SHELL_CACHE = 'gamestore-tv-shell-v1';
-const API_CACHE = 'gamestore-tv-api-v1';
-const VIDEO_CACHE = 'gamestore-tv-videos-v1';
+const APP_SHELL_CACHE = 'gamestore-tv-shell-v2';
+const API_CACHE = 'gamestore-tv-api-v2';
+const VIDEO_CACHE = 'gamestore-tv-videos-v2';
 const OFFLINE_URL = 'offline.html';
 
 const API_ORIGINS = [
