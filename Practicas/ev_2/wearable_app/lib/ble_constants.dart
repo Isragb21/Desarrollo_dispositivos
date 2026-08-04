@@ -7,4 +7,5 @@ class BLEConstants {
   static const String heartRateUUID = 'aaaaaaaa-0005-1234-1234-123456789abc';
   static const String caloriesUUID = 'aaaaaaaa-0006-1234-1234-123456789abc';
   static const String userResponseUUID = 'aaaaaaaa-0007-1234-1234-123456789abc';
+  static const String purchaseAlertUUID = 'aaaaaaaa-0008-1234-1234-123456789abc';
 }

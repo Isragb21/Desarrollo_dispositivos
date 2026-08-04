@@ -80,6 +80,8 @@ class _WearableHomeState extends State<WearableHome> {
               const SessionAlertScreen(key: ValueKey('session')),
             WearableScreen.discount =>
               const DiscountAlertScreen(key: ValueKey('discount')),
+            WearableScreen.success =>
+              const PurchaseSuccessScreen(key: ValueKey('success')),
           },
         ),
       ),
@@ -324,8 +326,61 @@ class SessionAlertScreen extends StatelessWidget {
   }
 }
 
-class DiscountAlertScreen extends StatelessWidget {
-  const DiscountAlertScreen({super.key});
+class PurchaseSuccessScreen extends StatelessWidget {
+  const PurchaseSuccessScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<WearableViewModel>();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            color: Color(0xFF22C55E),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.check, size: 34, color: Colors.black),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'COMPRA EXITOSA',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF22C55E),
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '\$${vm.purchaseTotal.toStringAsFixed(2)}',
+          style: const TextStyle(
+            color: Color(0xFFF8FAFC),
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          '${vm.purchaseGames} juego(s) adquirido(s)',
+          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+        ),
+        const SizedBox(height: 12),
+        _ActionButton(
+          icon: Icons.home,
+          label: 'INICIO',
+          color: const Color(0xFF3B82F6),
+          onTap: () => vm.backToDashboard(),
+        ),
+      ],
+    );
+  }
+}
+
+class DiscountAlertScreen extends StatelessWidget {  const DiscountAlertScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

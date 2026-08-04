@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'ble_server.dart';
 
-enum WearableScreen { dashboard, cart, session, discount }
+enum WearableScreen { dashboard, cart, session, discount, success }
 
 class WearableViewModel extends ChangeNotifier {
   WearableScreen _screen = WearableScreen.dashboard;
@@ -20,6 +20,10 @@ class WearableViewModel extends ChangeNotifier {
   // Wishlist / descuento
   String _discountGame = '';
   int _discountPercent = 0;
+
+  // Compra exitosa
+  double _purchaseTotal = 0.0;
+  int _purchaseGames = 0;
 
   // Simulador de sensores
   BleServer? _ble;
@@ -36,6 +40,8 @@ class WearableViewModel extends ChangeNotifier {
   String get sessionUser => _sessionUser;
   String get discountGame => _discountGame;
   int get discountPercent => _discountPercent;
+  double get purchaseTotal => _purchaseTotal;
+  int get purchaseGames => _purchaseGames;
 
   bool get sensorsRunning => _sensorsRunning;
   int get steps => _steps;
@@ -64,6 +70,11 @@ class WearableViewModel extends ChangeNotifier {
         _discountGame = event['game'] as String? ?? '';
         _discountPercent = (event['percent'] as num?)?.toInt() ?? 0;
         _screen = WearableScreen.discount;
+        break;
+      case 'purchase':
+        _purchaseTotal = (event['total'] as num?)?.toDouble() ?? 0.0;
+        _purchaseGames = (event['games'] as num?)?.toInt() ?? 0;
+        _screen = WearableScreen.success;
         break;
       default:
         return;
@@ -105,6 +116,11 @@ class WearableViewModel extends ChangeNotifier {
 
   void resetToCart() {
     _screen = WearableScreen.cart;
+    notifyListeners();
+  }
+
+  void backToDashboard() {
+    _screen = WearableScreen.dashboard;
     notifyListeners();
   }
 

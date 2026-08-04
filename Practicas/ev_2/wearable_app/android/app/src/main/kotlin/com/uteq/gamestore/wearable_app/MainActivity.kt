@@ -41,6 +41,8 @@ class MainActivity : FlutterActivity() {
             UUID.fromString("aaaaaaaa-0006-1234-1234-123456789abc")
         private val USER_RESPONSE_UUID =
             UUID.fromString("aaaaaaaa-0007-1234-1234-123456789abc")
+        private val PURCHASE_ALERT_UUID =
+            UUID.fromString("aaaaaaaa-0008-1234-1234-123456789abc")
     }
 
     private var gattServer: BluetoothGattServer? = null
@@ -177,6 +179,14 @@ class MainActivity : FlutterActivity() {
                     BluetoothGattCharacteristic.PERMISSION_READ
                 ).apply { addDescriptor(getClientCharacteristicConfigDescriptor()) }
             )
+            service.addCharacteristic(
+                BluetoothGattCharacteristic(
+                    PURCHASE_ALERT_UUID,
+                    BluetoothGattCharacteristic.PROPERTY_WRITE or
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                    BluetoothGattCharacteristic.PERMISSION_WRITE
+                ).apply { addDescriptor(getClientCharacteristicConfigDescriptor()) }
+            )
 
             gattServer?.addService(service)
 
@@ -296,6 +306,7 @@ class MainActivity : FlutterActivity() {
                 CART_TOTAL_UUID -> "cart"
                 AUTH_ALERT_UUID -> "session"
                 DISCOUNT_ALERT_UUID -> "discount"
+                PURCHASE_ALERT_UUID -> "purchase"
                 else -> null
             }
             if (eventType == null) return

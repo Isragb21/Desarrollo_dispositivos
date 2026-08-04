@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gamestore_app/theme/app_theme.dart';
 import 'package:gamestore_app/providers/cart_provider.dart';
+import 'package:gamestore_app/providers/wearable_provider.dart';
 import 'package:gamestore_app/models/game.dart';
 import 'package:gamestore_app/services/api_service.dart';
 import 'package:gamestore_app/screens/game_detail_screen.dart';
@@ -246,11 +247,16 @@ class CartScreen extends StatelessWidget {
     Navigator.pop(context);
 
     if (result != null) {
+      final totalPagado = cart.total;
       await cart.loadCart();
       if (!context.mounted) return;
+      final juegos = (result['juegos_adquiridos'] as num?)?.toInt() ?? 0;
+      context
+          .read<WearableProvider>()
+          .sendPurchaseAlert(total: totalPagado, games: juegos);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Pago exitoso: ${result['juegos_adquiridos']} juego(s) adquirido(s)"),
+          content: Text("Pago exitoso: $juegos juego(s) adquirido(s)"),
           backgroundColor: AppColors.neonGreen,
           behavior: SnackBarBehavior.floating,
         ),

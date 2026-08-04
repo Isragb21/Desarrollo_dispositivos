@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:gamestore_app/services/api_service.dart';
 import 'package:gamestore_app/services/wearable_ble_service.dart';
 enum WearableConnectionStatus { searching, connected, error, disconnected }
 
@@ -40,6 +41,9 @@ class WearableProvider extends ChangeNotifier {
     _responseSub = _ble.responseStream.listen((response) {
       _lastResponse = response;
       notifyListeners();
+      if (response['type'] == 'pay') {
+        _completeWearablePayment(response);
+      }
     });
     _sensorSub = _ble.sensorStream.listen((reading) {
       _reading = reading;
@@ -64,6 +68,25 @@ class WearableProvider extends ChangeNotifier {
     required int percent,
   }) =>
       _ble.sendDiscountAlert(game: game, percent: percent);
+
+  Future<void> sendPurchaseAlert({
+    required double total,
+    required int games,
+  }) =>
+      _ble.sendPurchaseAlert(total: total, games: games);
+
+  /// El wearable pulsó "PAGAR": se completa el pago y se confirma al
+  /// wearable con una notificación de compra exitosa.
+  Future<void> _completeWearablePayment(Map<String, dynamic> response) async {
+    final total = (response['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await ApiService.simulatePayment();
+    if (result != null) {
+      await sendPurchaseAlert(
+        total: total,
+        games: (result['juegos_adquiridos'] as num?)?.toInt() ?? 0,
+      );
+    }
+  }
 
   void clearResponse() {
     _lastResponse = null;

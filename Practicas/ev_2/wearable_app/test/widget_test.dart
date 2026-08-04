@@ -42,4 +42,30 @@ void main() {
 
     expect(find.text('DETENER'), findsOneWidget);
   });
+
+  testWidgets('Una compra exitosa del teléfono muestra la pantalla de éxito',
+      (WidgetTester tester) async {
+    final vm = WearableViewModel();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WearableViewModel>.value(value: vm),
+          Provider<BleServer>(create: (_) => BleServer()),
+        ],
+        child: const WearableApp(),
+      ),
+    );
+
+    vm.handleEvent(const {'type': 'purchase', 'total': 1299.0, 'games': 3});
+    await tester.pump();
+
+    expect(find.text('COMPRA EXITOSA'), findsOneWidget);
+    expect(find.text('\$1299.00'), findsOneWidget);
+    expect(find.text('3 juego(s) adquirido(s)'), findsOneWidget);
+    expect(find.text('INICIO'), findsOneWidget);
+
+    await tester.tap(find.text('INICIO'));
+    await tester.pump();
+    expect(find.text('MONITOR'), findsOneWidget);
+  });
 }

@@ -37,6 +37,7 @@ class WearableBleService {
   BluetoothCharacteristic? _heartRateChar;
   BluetoothCharacteristic? _caloriesChar;
   BluetoothCharacteristic? _responseChar;
+  BluetoothCharacteristic? _purchaseChar;
 
   bool _scanning = false;
   StreamSubscription? _scanSub;
@@ -135,6 +136,8 @@ class WearableBleService {
           _caloriesChar = char;
         } else if (id.contains(WearableBleConstants.userResponseUUID)) {
           _responseChar = char;
+        } else if (id.contains(WearableBleConstants.purchaseAlertUUID)) {
+          _purchaseChar = char;
         }
       }
     }
@@ -207,6 +210,12 @@ class WearableBleService {
 
   Future<void> sendDiscountAlert({required String game, required int percent}) =>
       _write(_discountChar, {'game': game, 'percent': percent});
+
+  Future<void> sendPurchaseAlert({
+    required double total,
+    required int games,
+  }) =>
+      _write(_purchaseChar, {'total': total, 'games': games});
 
   Future<void> disconnect() async {
     try {
