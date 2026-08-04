@@ -1,0 +1,38 @@
+{
+    "name": "GameStore TV",
+    "short_name": "GameStoreTV",
+    "description": "PWA para Smart TV de GameStore: catálogo de videojuegos, carrusel de destacados y tráilers.",
+    "start_url": ".",
+    "scope": ".",
+    "display": "fullscreen",
+    "orientation": "landscape",
+    "background_color": "#0B0E14",
+    "theme_color": "#0B0E14",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
