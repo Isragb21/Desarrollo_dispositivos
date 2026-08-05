@@ -67,22 +67,25 @@ class _WearableHomeState extends State<WearableHome> {
 
   @override
   Widget build(BuildContext context) {
-    final screen = context.watch<WearableViewModel>().screen;
+    final vm = context.watch<WearableViewModel>();
     return SafeArea(
       child: Center(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
-          child: switch (screen) {
-            WearableScreen.dashboard =>
-              const SensorDashboardScreen(key: ValueKey('dashboard')),
-            WearableScreen.cart => const CartTotalScreen(key: ValueKey('cart')),
-            WearableScreen.session =>
-              const SessionAlertScreen(key: ValueKey('session')),
-            WearableScreen.discount =>
-              const DiscountAlertScreen(key: ValueKey('discount')),
-            WearableScreen.success =>
-              const PurchaseSuccessScreen(key: ValueKey('success')),
-          },
+          child: !vm.paired
+              ? const PairLockScreen(key: ValueKey('lock'))
+              : switch (vm.screen) {
+                  WearableScreen.dashboard =>
+                    const HomeDashboardScreen(key: ValueKey('dashboard')),
+                  WearableScreen.cart =>
+                    const CartTotalScreen(key: ValueKey('cart')),
+                  WearableScreen.session =>
+                    const SessionAlertScreen(key: ValueKey('session')),
+                  WearableScreen.discount =>
+                    const DiscountAlertScreen(key: ValueKey('discount')),
+                  WearableScreen.success =>
+                    const PurchaseSuccessScreen(key: ValueKey('success')),
+                },
         ),
       ),
     );
@@ -139,8 +142,78 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class SensorDashboardScreen extends StatelessWidget {
-  const SensorDashboardScreen({super.key});
+/// Pantalla de bloqueo: la app del wearable no se desbloquea hasta que el
+/// teléfono establece la conexión (evento "pair" vía BLE).
+class PairLockScreen extends StatelessWidget {
+  const PairLockScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<WearableViewModel>();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: const Color(0xFF151A24),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF94A3B8), width: 2),
+          ),
+          child: const Icon(
+            Icons.lock_outline,
+            color: Color(0xFF94A3B8),
+            size: 30,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'WEARABLE BLOQUEADO',
+          style: TextStyle(
+            color: Color(0xFFF8FAFC),
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Vincula tu teléfono para desbloquear',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+        ),
+        const SizedBox(height: 14),
+        if (vm.pairing) ...[
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: Color(0xFF3B82F6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Esperando al teléfono...',
+            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+          ),
+        ] else
+          _ActionButton(
+            icon: Icons.watch_outlined,
+            label: 'ESTABLECER CONEXIÓN',
+            color: const Color(0xFF3B82F6),
+            onTap: () => vm.beginPairing(),
+          ),
+      ],
+    );
+  }
+}
+
+/// Inicio del wearable ya vinculado: carrito, juegos obtenidos y aviso de
+/// ofertas / verificación 2FA (sin monitoreo de signos vitales).
+class HomeDashboardScreen extends StatelessWidget {
+  const HomeDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -149,87 +222,103 @@ class SensorDashboardScreen extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
-          'MONITOR',
+          'GAMESTORE',
           style: TextStyle(
-            color: Color(0xFF94A3B8),
+            color: Color(0xFFF8FAFC),
+            fontSize: 16,
+            letterSpacing: 3,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const Text(
+          'WEAR',
+          style: TextStyle(
+            color: Color(0xFF3B82F6),
             fontSize: 12,
             letterSpacing: 3,
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 8),
-        _MetricTile(
-          icon: Icons.directions_walk,
-          label: 'PASOS',
-          value: '${vm.steps}',
+        const SizedBox(height: 14),
+        _DashboardTile(
+          icon: Icons.shopping_cart_outlined,
+          label: 'CARRITO',
+          value: '\$${vm.cartTotal.toStringAsFixed(2)}',
+          hint: '${vm.cartCount} artículo(s)',
         ),
         const SizedBox(height: 6),
-        _MetricTile(
-          icon: Icons.favorite,
-          label: 'RITMO',
-          value: '${vm.heartRate} BPM',
+        _DashboardTile(
+          icon: Icons.videogame_asset_outlined,
+          label: 'JUEGOS OBTENIDOS',
+          value: '${vm.ownedGames}',
+          hint: 'en tu biblioteca',
         ),
-        const SizedBox(height: 6),
-        _MetricTile(
-          icon: Icons.local_fire_department,
-          label: 'CALORÍAS',
-          value: '${vm.calories.toStringAsFixed(1)} kcal',
-        ),
-        const SizedBox(height: 10),
-        _ActionButton(
-          icon: vm.sensorsRunning ? Icons.stop : Icons.play_arrow,
-          label: vm.sensorsRunning ? 'DETENER' : 'INICIAR',
-          color: vm.sensorsRunning
-              ? const Color(0xFFEF4444)
-              : const Color(0xFF22C55E),
-          onTap: () => vm.toggleSensors(),
+        const SizedBox(height: 12),
+        const Text(
+          'Las ofertas de tu wishlist y la verificación 2FA llegan aquí',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
         ),
       ],
     );
   }
 }
 
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({
+class _DashboardTile extends StatelessWidget {
+  const _DashboardTile({
     required this.icon,
     required this.label,
     required this.value,
+    required this.hint,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final String hint;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 156,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      width: 160,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF151A24),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF3B82F6)),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFFF8FAFC),
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+          Row(
+            children: [
+              Icon(icon, size: 16, color: const Color(0xFF3B82F6)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
+          ),
+          Text(
+            hint,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
           ),
         ],
       ),

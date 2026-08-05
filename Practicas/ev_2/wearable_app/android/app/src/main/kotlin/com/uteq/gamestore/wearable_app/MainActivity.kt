@@ -33,16 +33,12 @@ class MainActivity : FlutterActivity() {
             UUID.fromString("aaaaaaaa-0002-1234-1234-123456789abc")
         private val DISCOUNT_ALERT_UUID =
             UUID.fromString("aaaaaaaa-0003-1234-1234-123456789abc")
-        private val STEPS_UUID =
-            UUID.fromString("aaaaaaaa-0004-1234-1234-123456789abc")
-        private val HEART_RATE_UUID =
-            UUID.fromString("aaaaaaaa-0005-1234-1234-123456789abc")
-        private val CALORIES_UUID =
-            UUID.fromString("aaaaaaaa-0006-1234-1234-123456789abc")
         private val USER_RESPONSE_UUID =
             UUID.fromString("aaaaaaaa-0007-1234-1234-123456789abc")
         private val PURCHASE_ALERT_UUID =
             UUID.fromString("aaaaaaaa-0008-1234-1234-123456789abc")
+        private val PAIR_ALERT_UUID =
+            UUID.fromString("aaaaaaaa-0009-1234-1234-123456789abc")
     }
 
     private var gattServer: BluetoothGattServer? = null
@@ -69,15 +65,6 @@ class MainActivity : FlutterActivity() {
                     "notifyResponse" -> {
                         val payload = call.arguments as? String ?: ""
                         notifyUserResponse(payload)
-                        result.success(null)
-                    }
-                    "notifySensor" -> {
-                        val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
-                        notifySensorData(
-                            (args["steps"] as? Number)?.toInt() ?: 0,
-                            (args["heartRate"] as? Number)?.toInt() ?: 0,
-                            (args["calories"] as? Number)?.toDouble() ?: 0.0
-                        )
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -150,26 +137,10 @@ class MainActivity : FlutterActivity() {
             )
             service.addCharacteristic(
                 BluetoothGattCharacteristic(
-                    STEPS_UUID,
-                    BluetoothGattCharacteristic.PROPERTY_READ or
+                    PAIR_ALERT_UUID,
+                    BluetoothGattCharacteristic.PROPERTY_WRITE or
                         BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                    BluetoothGattCharacteristic.PERMISSION_READ
-                ).apply { addDescriptor(getClientCharacteristicConfigDescriptor()) }
-            )
-            service.addCharacteristic(
-                BluetoothGattCharacteristic(
-                    HEART_RATE_UUID,
-                    BluetoothGattCharacteristic.PROPERTY_READ or
-                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                    BluetoothGattCharacteristic.PERMISSION_READ
-                ).apply { addDescriptor(getClientCharacteristicConfigDescriptor()) }
-            )
-            service.addCharacteristic(
-                BluetoothGattCharacteristic(
-                    CALORIES_UUID,
-                    BluetoothGattCharacteristic.PROPERTY_READ or
-                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                    BluetoothGattCharacteristic.PERMISSION_READ
+                    BluetoothGattCharacteristic.PERMISSION_WRITE
                 ).apply { addDescriptor(getClientCharacteristicConfigDescriptor()) }
             )
             service.addCharacteristic(
@@ -220,26 +191,6 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    /// Notifica cada métrica del simulador en su característica GATT (NOTIFY).
-    private fun notifySensorData(steps: Int, heartRate: Int, calories: Double) {
-        val device = connectedDevice ?: return
-        val service = gattServer?.getService(SERVICE_UUID) ?: return
-        val payloads = mapOf(
-            STEPS_UUID to steps.toString(),
-            HEART_RATE_UUID to heartRate.toString(),
-            CALORIES_UUID to String.format("%.2f", calories)
-        )
-        payloads.forEach { (uuid, value) ->
-            val characteristic = service.getCharacteristic(uuid) ?: return@forEach
-            characteristic.value = value.toByteArray(Charsets.UTF_8)
-            try {
-                gattServer?.notifyCharacteristicChanged(device, characteristic, false)
-            } catch (e: Exception) {
-                Log.e(TAG, "notify $uuid error: ${e.message}")
-            }
-        }
-    }
-
     @SuppressLint("MissingPermission")
     private fun startAdvertising() {
         val settings = AdvertiseSettings.Builder()
@@ -283,8 +234,8 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        @SuppressLint("MissingPermission")
-        override fun onCharacteristicWriteRequest(
+    @SuppressLint("MissingPermission")
+    override fun onCharacteristicWriteRequest(
             device: BluetoothDevice,
             requestId: Int,
             characteristic: BluetoothGattCharacteristic,
@@ -307,6 +258,7 @@ class MainActivity : FlutterActivity() {
                 AUTH_ALERT_UUID -> "session"
                 DISCOUNT_ALERT_UUID -> "discount"
                 PURCHASE_ALERT_UUID -> "purchase"
+                PAIR_ALERT_UUID -> "pair"
                 else -> null
             }
             if (eventType == null) return

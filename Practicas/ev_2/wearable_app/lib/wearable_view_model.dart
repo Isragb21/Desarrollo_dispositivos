@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 
 import 'ble_server.dart';
@@ -9,6 +6,11 @@ enum WearableScreen { dashboard, cart, session, discount, success }
 
 class WearableViewModel extends ChangeNotifier {
   WearableScreen _screen = WearableScreen.dashboard;
+
+  // Pareado: la app permanece bloqueada hasta que el teléfono envía "pair".
+  bool _paired = false;
+  bool _pairing = false;
+  int _ownedGames = 0;
 
   // Carrito
   double _cartTotal = 0.0;
@@ -25,16 +27,12 @@ class WearableViewModel extends ChangeNotifier {
   double _purchaseTotal = 0.0;
   int _purchaseGames = 0;
 
-  // Simulador de sensores
   BleServer? _ble;
-  Timer? _sensorTimer;
-  final _random = Random();
-  bool _sensorsRunning = false;
-  int _steps = 0;
-  int _heartRate = 75;
-  double _calories = 0.0;
 
   WearableScreen get screen => _screen;
+  bool get paired => _paired;
+  bool get pairing => _pairing;
+  int get ownedGames => _ownedGames;
   double get cartTotal => _cartTotal;
   int get cartCount => _cartCount;
   String get sessionUser => _sessionUser;
@@ -43,13 +41,16 @@ class WearableViewModel extends ChangeNotifier {
   double get purchaseTotal => _purchaseTotal;
   int get purchaseGames => _purchaseGames;
 
-  bool get sensorsRunning => _sensorsRunning;
-  int get steps => _steps;
-  int get heartRate => _heartRate;
-  double get calories => _calories;
-
   void attachBle(BleServer ble) {
     _ble = ble;
+  }
+
+  /// El usuario pulsó "ESTABLECER CONEXIÓN": asegura que el servidor BLE esté
+  /// anunciando y espera el evento "pair" del teléfono.
+  Future<void> beginPairing() async {
+    _pairing = true;
+    notifyListeners();
+    await _ble?.start();
   }
 
   /// Eventos recibidos del teléfono vía BLE.
@@ -57,6 +58,12 @@ class WearableViewModel extends ChangeNotifier {
     final type = event['type'] as String? ?? '';
 
     switch (type) {
+      case 'pair':
+        _ownedGames = (event['games'] as num?)?.toInt() ?? 0;
+        _paired = true;
+        _pairing = false;
+        _screen = WearableScreen.dashboard;
+        break;
       case 'cart':
         _cartTotal = (event['total'] as num?)?.toDouble() ?? 0.0;
         _cartCount = (event['count'] as num?)?.toInt() ?? 0;
@@ -89,31 +96,6 @@ class WearableViewModel extends ChangeNotifier {
   String responseForDiscount(bool open) =>
       '{"type":"${open ? "open" : "dismiss"}","game":"$_discountGame"}';
 
-  /// Arranca o detiene el simulador local de sensores. Cada segundo genera
-  /// pasos, ritmo cardíaco y calorías y los notifica por BLE (NOTIFY).
-  void toggleSensors() {
-    if (_sensorsRunning) {
-      _sensorTimer?.cancel();
-      _sensorTimer = null;
-      _sensorsRunning = false;
-      notifyListeners();
-      return;
-    }
-
-    _sensorsRunning = true;
-    notifyListeners();
-    _tick();
-    _sensorTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-  }
-
-  void _tick() {
-    _steps += 1 + _random.nextInt(4);
-    _heartRate = (_heartRate + _random.nextInt(7) - 3).clamp(55, 140);
-    _calories += 0.08 + _random.nextDouble() * 0.30;
-    _ble?.notifySensorData(_steps, _heartRate, _calories);
-    notifyListeners();
-  }
-
   void resetToCart() {
     _screen = WearableScreen.cart;
     notifyListeners();
@@ -122,11 +104,5 @@ class WearableViewModel extends ChangeNotifier {
   void backToDashboard() {
     _screen = WearableScreen.dashboard;
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _sensorTimer?.cancel();
-    super.dispose();
   }
 }

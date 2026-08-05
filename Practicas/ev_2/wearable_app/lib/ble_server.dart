@@ -68,21 +68,6 @@ class BleServer {
     }
   }
 
-  /// Notifica en tiempo real las 3 métricas del simulador (pasos, ritmo
-  /// cardíaco, calorías), cada una en su característica GATT con NOTIFY.
-  Future<void> notifySensorData(
-      int steps, int heartRate, double calories) async {
-    try {
-      await _methodChannel.invokeMethod('notifySensor', {
-        'steps': steps,
-        'heartRate': heartRate,
-        'calories': calories,
-      });
-    } catch (e) {
-      developer.log('Notify sensor error: $e', name: '[WEARABLE]');
-    }
-  }
-
   Future<void> dispose() async {
     await _events.close();
     _listening = false;
