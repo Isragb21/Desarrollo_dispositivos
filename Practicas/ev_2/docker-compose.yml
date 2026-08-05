@@ -30,6 +30,7 @@ services:
       PORT: 3000
     volumes:
       - ./backend/public:/app/public
+      - ./backend/src:/app/src
 
 volumes:
   pgdata:

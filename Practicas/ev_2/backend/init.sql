@@ -54,11 +54,10 @@ CREATE TABLE IF NOT EXISTS deseados (
   UNIQUE(user_id, juego_id)
 );
 
-CREATE TABLE IF NOT EXISTS notificaciones (
+CREATE TABLE IF NOT EXISTS pending_logins (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  mensaje TEXT NOT NULL,
-  leida BOOLEAN DEFAULT FALSE,
+  email VARCHAR(200) NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending', -- pending, confirmed, rejected
   created_at TIMESTAMP DEFAULT NOW()
 );
 
