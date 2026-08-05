@@ -365,4 +365,33 @@ class ApiService {
       return false;
     }
   }
+
+  /// Estado de la solicitud de inicio de sesión en TV (2FA):
+  /// 'pending' | 'confirmed' | 'rejected' | 'none'.
+  static Future<String> check2fa(String email) async {
+    try {
+      final response = await http.get(Uri.parse("$_baseUrl/auth/check-2fa/$email"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return (data['status'] as String?) ?? 'none';
+      }
+      return 'none';
+    } catch (e) {
+      return 'none';
+    }
+  }
+
+  /// Confirma o rechaza la solicitud de inicio de sesión en TV.
+  static Future<bool> confirm2fa(String email, String status) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$_baseUrl/auth/confirm-2fa"),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"email": email, "status": status}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
 }

@@ -4,6 +4,7 @@ import 'package:gamestore_app/theme/app_theme.dart';
 import 'package:gamestore_app/services/api_service.dart';
 import 'package:gamestore_app/models/user.dart';
 import 'package:gamestore_app/providers/wishlist_provider.dart';
+import 'package:gamestore_app/providers/wearable_provider.dart';
 import 'package:gamestore_app/screens/login_screen.dart';
 import 'package:gamestore_app/screens/edit_profile_screen.dart';
 import 'package:gamestore_app/screens/game_detail_screen.dart';
@@ -50,6 +51,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildProfileCard(context, user),
                 const SizedBox(height: 24),
                 _buildStatsSection(context, user),
+                const SizedBox(height: 24),
+                _buildWearableSection(context),
                 const SizedBox(height: 24),
                 _buildWishlistSection(context, wishlist),
                 const SizedBox(height: 24),
@@ -287,6 +290,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildWearableSection(BuildContext context) {
+    final wearable = context.watch<WearableProvider>();
+    final connected = wearable.status == WearableConnectionStatus.connected;
+    final (statusText, statusColor) = switch (wearable.status) {
+      WearableConnectionStatus.searching => ("BUSCANDO...", AppColors.gold),
+      WearableConnectionStatus.connected =>
+        wearable.paired
+            ? ("VINCULADO", AppColors.neonGreen)
+            : ("CONECTADO, SIN VINCULAR", AppColors.blueAccent),
+      WearableConnectionStatus.error => ("ERROR DE CONEXIÓN", AppColors.error),
+      WearableConnectionStatus.disconnected => ("DESCONECTADO", AppColors.error),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle("WEARABLE"),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.neonGreen.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.watch_rounded,
+                      color: AppColors.neonGreen, size: 26),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "CONEXIÓN BLE",
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.circle, color: statusColor, size: 12),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: connected && wearable.paired
+                      ? null
+                      : () => _pairWearable(context),
+                  icon: const Icon(Icons.bluetooth_connected, size: 18),
+                  label: Text(
+                    connected && wearable.paired
+                        ? "WEARABLE VINCULADO"
+                        : "VINCULAR WEARABLE",
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Pulsa el botón y luego toca \"ESTABLECER CONEXIÓN\" en tu wearable para desbloquearlo.",
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pairWearable(BuildContext context) async {
+    final wearable = context.read<WearableProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    if (!wearable.isConnected) {
+      await wearable.connect();
+      for (var i = 0; i < 15 && !wearable.isConnected; i++) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    }
+    if (!mounted) return;
+    if (wearable.isConnected) {
+      await wearable.sendPair(
+        games: ApiService.currentUser?.gamesOwned ?? 0,
+      );
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Wearable vinculado y desbloqueado")),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text("No se encontró el wearable. Verifica que esté cerca y activo."),
+        ),
+      );
+    }
+  }
+
   Widget _buildWishlistSection(BuildContext context, WishlistProvider wishlist) {
     final games = wishlist.items.values.toList();
     return Column(
@@ -371,8 +493,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         _buildSectionTitle("CONFIGURACIÓN"),
         const SizedBox(height: 12),
-        _buildSettingItem(Icons.bluetooth, "CONEXIÓN BLE", "GAMESTORE-TV"),
-        _buildDivider(),
         _buildSettingItem(Icons.notifications_outlined, "NOTIFICACIONES", "ACTIVADAS"),
         _buildDivider(),
         _buildSettingItem(Icons.security, "SEGURIDAD", "PROTOCOLO ACTIVO"),

@@ -5,28 +5,25 @@ import 'package:gamestore_app/services/api_service.dart';
 import 'package:gamestore_app/services/wearable_ble_service.dart';
 enum WearableConnectionStatus { searching, connected, error, disconnected }
 
-/// Umbral de ritmo cardíaco que dispara la alerta de seguridad (SA.1.B).
-const int kHeartRateThreshold = 110;
-
 class WearableProvider extends ChangeNotifier {
   final WearableBleService _ble = WearableBleService();
   WearableConnectionStatus _status = WearableConnectionStatus.disconnected;
   Map<String, dynamic>? _lastResponse;
-  SensorReading _reading = const SensorReading();
+  bool _paired = false;
   StreamSubscription? _stateSub;
   StreamSubscription? _responseSub;
-  StreamSubscription? _sensorSub;
+
+  /// Respuestas de aprobación/rechazo del wearable (2FA).
+  final StreamController<Map<String, dynamic>> _approvals =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get approvalStream => _approvals.stream;
 
   WearableConnectionStatus get status => _status;
   bool get isConnected => _status == WearableConnectionStatus.connected;
   Map<String, dynamic>? get lastResponse => _lastResponse;
-  SensorReading get reading => _reading;
 
-  /// Alerta de umbral: ritmo cardíaco por encima de [kHeartRateThreshold].
-  bool get isHeartRateHigh {
-    final hr = _reading.heartRate;
-    return hr != null && hr > kHeartRateThreshold;
-  }
+  /// El teléfono ya vinculó el wearable (se envió el evento "pair").
+  bool get paired => _paired;
 
   void init() {
     _stateSub = _ble.stateStream.listen((state) {
@@ -36,18 +33,18 @@ class WearableProvider extends ChangeNotifier {
         'desconectado' => WearableConnectionStatus.disconnected,
         _ => WearableConnectionStatus.error,
       };
+      if (state != 'conectado') _paired = false;
       notifyListeners();
     });
     _responseSub = _ble.responseStream.listen((response) {
       _lastResponse = response;
       notifyListeners();
-      if (response['type'] == 'pay') {
+      final type = response['type'] as String? ?? '';
+      if (type == 'pay') {
         _completeWearablePayment(response);
+      } else if (type == 'approve' || type == 'reject') {
+        _approvals.add(response);
       }
-    });
-    _sensorSub = _ble.sensorStream.listen((reading) {
-      _reading = reading;
-      notifyListeners();
     });
   }
 
@@ -55,6 +52,13 @@ class WearableProvider extends ChangeNotifier {
     // BLE solo existe en dispositivos reales/emuladores (no en la web).
     if (kIsWeb) return;
     await _ble.scanAndConnect();
+  }
+
+  /// Vincula el wearable: envía el evento "pair" que lo desbloquea.
+  Future<void> sendPair({required int games}) async {
+    await _ble.sendPair(games: games);
+    _paired = true;
+    notifyListeners();
   }
 
   Future<void> sendCart({required double total, required int count}) =>
@@ -97,7 +101,7 @@ class WearableProvider extends ChangeNotifier {
   void dispose() {
     _stateSub?.cancel();
     _responseSub?.cancel();
-    _sensorSub?.cancel();
+    _approvals.close();
     _ble.dispose();
     super.dispose();
   }

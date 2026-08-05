@@ -5,7 +5,6 @@ import 'package:gamestore_app/models/game.dart';
 import 'package:gamestore_app/providers/game_provider.dart';
 import 'package:gamestore_app/services/api_service.dart';
 import 'package:gamestore_app/screens/game_detail_screen.dart';
-import 'package:gamestore_app/widgets/wearable_monitor.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -38,8 +37,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(context),
-              const SizedBox(height: 16),
-              const WearableMonitor(),
               const SizedBox(height: 24),
               _buildSectionTitle(context, "LANZAMIENTOS DESTACADOS"),
               const SizedBox(height: 12),
