@@ -87,4 +87,38 @@ class ApiService {
       return [];
     }
   }
+
+  /// Login desde TV: valida credenciales y crea una solicitud 2FA pendiente.
+  /// Devuelve [true] si quedó pendiente de confirmación en el wearable.
+  static Future<bool> loginTv(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/auth/login-tv"),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'password': password}),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['pending'] == true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Polling del estado 2FA: 'pending' | 'confirmed' | 'rejected' | 'none'.
+  static Future<String> check2fa(String email) async {
+    try {
+      final uri = Uri.parse("$baseUrl/auth/check-2fa/${Uri.encodeComponent(email)}");
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return (data['status'] as String?) ?? 'none';
+      }
+      return 'none';
+    } catch (_) {
+      return 'none';
+    }
+  }
 }

@@ -12,6 +12,22 @@ class TvColors {
   static const Color blueAccent = Color(0xFF3B82F6);
 }
 
+/// Estilo tipográfico 10-foot reutilizable.
+class GoogleFontsStyle {
+  static TextStyle spaceGrotesk(
+    double size, {
+    bool bold = false,
+    Color? color,
+  }) {
+    return TextStyle(
+      color: color ?? TvColors.textPrimary,
+      fontSize: size,
+      fontWeight: bold ? FontWeight.bold : FontWeight.w600,
+      letterSpacing: -0.02,
+    );
+  }
+}
+
 /// Tema TV: escala 10-foot (SA.2.B) - tipografía grande desde 3 metros.
 class TvTheme {
   static ThemeData get darkTheme {
