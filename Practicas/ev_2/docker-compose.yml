@@ -28,6 +28,8 @@ services:
       DB_USER: gamestore
       DB_PASSWORD: gamestore123
       PORT: 3000
+    volumes:
+      - ./backend/public:/app/public
 
 volumes:
   pgdata:
