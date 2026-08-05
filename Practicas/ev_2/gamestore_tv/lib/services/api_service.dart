@@ -11,6 +11,14 @@ class ApiService {
     return "http://localhost:3000$path";
   }
 
+  /// URL del fondo HD 1920x1080 del juego (generado en el backend).
+  /// `/images/god_of_war_ragnarok.jpg` -> `/images/backdrops/god_of_war_ragnarok.jpg`.
+  static String backdropUrl(String imagePath) {
+    if (imagePath.isEmpty) return imageUrl(imagePath);
+    final fileName = imagePath.split('/').last;
+    return imageUrl('/images/backdrops/$fileName');
+  }
+
   /// URL del video de fondo derivada de la portada del juego, p.ej.
   /// `/images/cyberpunk_2077.jpg` -> `videos/cyberpunk_2077.mp4`.
   /// El MP4 vive en `web/videos/` (mismo origen que la PWA) para ser
@@ -20,6 +28,22 @@ class ApiService {
     final fileName = imagePath.split('/').last;
     final base = fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
     return 'videos/$base.mp4';
+  }
+
+  /// Juegos que tienen tráiler en `web/videos/<slug>.mp4`.
+  /// Los demás usan solo el fondo HD (imagen) para no depender del video.
+  static const Set<String> _gamesWithVideo = {
+    'cyberpunk_2077',
+    'elden_ring',
+    'god_of_war_ragnarok',
+    'stray',
+  };
+
+  static bool hasVideo(String imagePath) {
+    if (imagePath.isEmpty) return false;
+    final fileName = imagePath.split('/').last;
+    final base = fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+    return _gamesWithVideo.contains(base);
   }
 
   static double _parseDouble(dynamic v) {

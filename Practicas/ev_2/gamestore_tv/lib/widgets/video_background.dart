@@ -101,7 +101,8 @@ String _registerFactory(String src) {
       ..playsInline = true
       ..style.width = '100%'
       ..style.height = '100%'
-      ..style.objectFit = 'cover';
+      ..style.objectFit = 'cover'
+      ..style.opacity = '0.55';
     video.addEventListener(
       'error',
       ((web.Event event) {

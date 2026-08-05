@@ -9,7 +9,7 @@ import 'package:gamestore_tv/widgets/game_card.dart';
 import 'package:gamestore_tv/widgets/video_background.dart';
 
 /// Pantalla principal TV (1920x1080, sin scroll, safe zone 5%).
-/// Carrusel superior con destacados + grid 2x2 de tarjetas enfocables.
+/// Destacado del juego seleccionado + rail horizontal con todo el catalogo.
 /// Recibe el carrito del teléfono vía BroadcastChannel (origin validado).
 class TvHomeScreen extends StatefulWidget {
   const TvHomeScreen({super.key});
@@ -20,9 +20,10 @@ class TvHomeScreen extends StatefulWidget {
 
 class _TvHomeScreenState extends State<TvHomeScreen> {
   int _sidebarIndex = 0;
-  static const int _cols = 2;
-  static const int _rows = 2;
-  static const int _gridSize = _cols * _rows;
+
+  // Rail horizontal: muestra hasta 5 tarjetas, navega por todos los juegos.
+  static const int _railVisible = 5;
+  static const double _railHeight = 320;
 
   List<Game> _games = [];
   int _selected = 0;
@@ -97,12 +98,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> {
 
   Game? get _selectedGame => _games.isEmpty ? null : _games[_selected];
 
-  void _move(int dx, int dy) {
-    final row = _selected ~/ _cols;
-    final col = _selected % _cols;
-    final nrow = (row + dy).clamp(0, _rows - 1);
-    final ncol = (col + dx).clamp(0, _cols - 1);
-    final next = nrow * _cols + ncol;
+  /// Navega el rail en circulo (izq/der y arriba/abajo avanzan por los juegos).
+  void _move(int dx) {
+    if (_games.isEmpty) return;
+    final next = (_selected + dx) % _games.length;
     if (next != _selected) {
       setState(() => _selected = next);
       _broadcastSelection();
@@ -123,16 +122,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> {
 
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowUp:
-        _move(0, -1);
+        _move(-1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowDown:
-        _move(0, 1);
+        _move(1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowLeft:
-        _move(-1, 0);
+        _move(-1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowRight:
-        _move(1, 0);
+        _move(1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.enter:
       case LogicalKeyboardKey.select:
@@ -250,7 +249,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> {
                 const SizedBox(height: 28),
                 Expanded(child: _buildFeatured(context, _selectedGame)),
                 const SizedBox(height: 24),
-                _buildGrid(),
+                _buildRail(),
               ],
             ),
           ),
@@ -533,41 +532,36 @@ class _TvHomeScreenState extends State<TvHomeScreen> {
     );
   }
 
-  Widget _buildGrid() {
-    final games = _games.take(_gridSize).toList();
-    final rows = <Widget>[];
-    for (var r = 0; r < _rows; r++) {
-      final rowGames = <Widget>[];
-      for (var c = 0; c < _cols; c++) {
-        final idx = r * _cols + c;
-        if (idx < games.length) {
-          rowGames.add(
+  /// Rail horizontal de juegos (SA.2.B): hasta [_railVisible] tarjetas visibles
+  /// y la seleccion desplaza la ventana para alcanzar todo el catalogo.
+  Widget _buildRail() {
+    final games = _games;
+    if (games.isEmpty) return const SizedBox.shrink();
+
+    final maxStart = games.length > _railVisible ? games.length - _railVisible : 0;
+    final start = (_selected - _railVisible ~/ 2).clamp(0, maxStart);
+    final end = (start + _railVisible) > games.length
+        ? games.length
+        : start + _railVisible;
+    final visible = games.sublist(start, end);
+
+    return SizedBox(
+      height: _railHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < visible.length; i++) ...[
             Expanded(
               child: GameCard(
-                game: games[idx],
-                focused: idx == _selected,
-                onSelect: () => setState(() => _selected = idx),
+                game: visible[i],
+                focused: (start + i) == _selected,
+                onSelect: () => setState(() => _selected = start + i),
               ),
             ),
-          );
-          rowGames.add(const SizedBox(width: 24));
-        }
-      }
-      if (rowGames.isNotEmpty) {
-        rowGames.removeLast();
-        rows.add(
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: rowGames,
-          ),
-        );
-        rows.add(const SizedBox(height: 24));
-      }
-    }
-    if (rows.isNotEmpty) rows.removeLast();
-    return SizedBox(
-      height: 210,
-      child: Column(mainAxisSize: MainAxisSize.min, children: rows),
+            if (i < visible.length - 1) const SizedBox(width: 24),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -587,24 +581,33 @@ class GoogleFontsStyle {
   }
 }
 
-/// Imagen de fondo del juego seleccionado con fallback visual (SA.2.C).
+/// Fondo del juego seleccionado (SA.2.C / DE.1).
+///
+/// Base: backdrop HD 1920x1080 (imagen generada en el backend) claveada por
+/// [Game.id] para que el cambio de juego sea inmediato y nitido.
+/// Overlay: video del juego solo si existe, translucido para no tapar la imagen.
+/// Si la imagen falla, cae al poster original de la API.
 class _Background extends StatelessWidget {
   final Game? selected;
   const _Background({required this.selected});
 
   @override
   Widget build(BuildContext context) {
+    if (selected == null) return _fallback();
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (selected != null)
-          // Video de fondo del juego con fallback a la portada (SA.2.C / DE.1)
+        Image.network(
+          ApiService.backdropUrl(selected!.imageUrl),
+          key: ValueKey(selected!.id),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _imageFallback(selected!),
+        ),
+        if (ApiService.hasVideo(selected!.imageUrl))
           VideoBackground(
             src: ApiService.videoUrl(selected!.imageUrl),
-            fallback: _imageFallback(selected!),
-          )
-        else
-          _fallback(),
+            fallback: const SizedBox.shrink(),
+          ),
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
