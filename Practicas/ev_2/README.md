@@ -49,8 +49,10 @@ flutter pub get
 flutter run          # en el emulador Wear OS XL Round
 ```
 
-El wearable inicia un servidor GATT BLE y un simulador de sensores
-(pasos / ritmo cardíaco / calorías) que notifica cada segundo vía `NOTIFY`.
+El wearable inicia un servidor GATT BLE (`wearable_app`) que se empareja con el
+teléfono y recibe notificaciones del ecosistema GameStore: ofertas con descuento
+real, carrito, aprobación de sesión (2FA) y lista de deseos. Cada alerta se
+muestra en la pantalla del reloj y el botón VER abre el juego en el teléfono.
 
 ## 4. Smart TV (PWA 1920×1080)
 
