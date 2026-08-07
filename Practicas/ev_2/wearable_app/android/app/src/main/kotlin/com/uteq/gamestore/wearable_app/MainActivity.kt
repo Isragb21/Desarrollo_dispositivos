@@ -33,6 +33,8 @@ class MainActivity : FlutterActivity() {
             UUID.fromString("aaaaaaaa-0002-1234-1234-123456789abc")
         private val DISCOUNT_ALERT_UUID =
             UUID.fromString("aaaaaaaa-0003-1234-1234-123456789abc")
+        private val FAVORITES_ALERT_UUID =
+            UUID.fromString("aaaaaaaa-0004-1234-1234-123456789abc")
         private val USER_RESPONSE_UUID =
             UUID.fromString("aaaaaaaa-0007-1234-1234-123456789abc")
         private val PURCHASE_ALERT_UUID =
@@ -67,6 +69,10 @@ class MainActivity : FlutterActivity() {
                         notifyUserResponse(payload)
                         result.success(null)
                     }
+                    "requestPermissions" -> {
+                        requestBluetoothPermissionsIfNeeded()
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -86,6 +92,10 @@ class MainActivity : FlutterActivity() {
     @SuppressLint("MissingPermission")
     private fun startGattServer(): Boolean {
         return try {
+            if (gattServer != null) {
+                Log.i(TAG, "GATT server ya activo")
+                return true
+            }
             if (!hasBlePermissions()) {
                 Log.i(TAG, "Faltan permisos BLE, solicitando...")
                 requestBluetoothPermissionsIfNeeded()
@@ -97,6 +107,10 @@ class MainActivity : FlutterActivity() {
             bluetoothAdapter = bleManager?.adapter
             if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
                 Log.w(TAG, "Bluetooth no disponible")
+                return false
+            }
+            if (isEmulator()) {
+                Log.w(TAG, "Emulador detectado, usando puente por red")
                 return false
             }
 
@@ -145,6 +159,14 @@ class MainActivity : FlutterActivity() {
             )
             service.addCharacteristic(
                 BluetoothGattCharacteristic(
+                    FAVORITES_ALERT_UUID,
+                    BluetoothGattCharacteristic.PROPERTY_WRITE or
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                    BluetoothGattCharacteristic.PERMISSION_WRITE
+                ).apply { addDescriptor(getClientCharacteristicConfigDescriptor()) }
+            )
+            service.addCharacteristic(
+                BluetoothGattCharacteristic(
                     USER_RESPONSE_UUID,
                     BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                     BluetoothGattCharacteristic.PERMISSION_READ
@@ -168,6 +190,16 @@ class MainActivity : FlutterActivity() {
             Log.e(TAG, "startGattServer: ${e.message}")
             false
         }
+    }
+
+    private fun isEmulator(): Boolean {
+        return Build.FINGERPRINT.startsWith("generic") ||
+            Build.FINGERPRINT.contains("emulator") ||
+            Build.MODEL.contains("sdk") ||
+            Build.MODEL.contains("Emulator") ||
+            Build.MODEL.contains("google_sdk") ||
+            Build.HARDWARE.contains("goldfish") ||
+            Build.HARDWARE.contains("ranchu")
     }
 
     private fun getClientCharacteristicConfigDescriptor(): BluetoothGattDescriptor {
@@ -259,6 +291,7 @@ class MainActivity : FlutterActivity() {
                 DISCOUNT_ALERT_UUID -> "discount"
                 PURCHASE_ALERT_UUID -> "purchase"
                 PAIR_ALERT_UUID -> "pair"
+                FAVORITES_ALERT_UUID -> "favorites"
                 else -> null
             }
             if (eventType == null) return
@@ -283,6 +316,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun requestBluetoothPermissionsIfNeeded() {
+        if (hasBlePermissions()) {
+            Log.i(TAG, "Permisos BLE ya concedidos")
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requestPermissions(
                 arrayOf(
