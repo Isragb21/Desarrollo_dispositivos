@@ -48,6 +48,7 @@ class _VideoBackgroundState extends State<VideoBackground> {
     super.didUpdateWidget(old);
     if (old.src != widget.src) {
       _removeErrorListener(old.src, _onVideoError);
+      _disposeElement(_viewTypeFor(old.src));
       _viewType = _registerFactory(widget.src);
       _addErrorListener(widget.src, _onVideoError);
       _failed = false;
@@ -60,6 +61,7 @@ class _VideoBackgroundState extends State<VideoBackground> {
   void dispose() {
     _timeout?.cancel();
     _removeErrorListener(widget.src, _onVideoError);
+    _disposeElement(_viewType);
     super.dispose();
   }
 
@@ -99,10 +101,12 @@ String _registerFactory(String src) {
       ..muted = true
       ..loop = true
       ..playsInline = true
+      ..preload = 'auto'
       ..style.width = '100%'
       ..style.height = '100%'
       ..style.objectFit = 'cover'
-      ..style.opacity = '0.55';
+      ..style.opacity = '0.9';
+    _elementsByViewType[viewType] = video;
     video.addEventListener(
       'error',
       ((web.Event event) {
@@ -111,9 +115,40 @@ String _registerFactory(String src) {
         }
       }).toJS,
     );
+    // play() explícito: en los platform views de Flutter web el atributo
+    // `autoplay` no siempre dispara la reproducción. Se invoca al crear el
+    // elemento (retardo corto para garantizar que ya esté en el DOM) y de
+    // nuevo cuando hay metadatos/bytes reproducibles.
+    void play() {
+      video.play();
+    }
+
+    video.addEventListener(
+      'loadedmetadata',
+      ((web.Event event) => play()).toJS,
+    );
+    video.addEventListener(
+      'canplay',
+      ((web.Event event) => play()).toJS,
+    );
+    web.window.setTimeout(play.toJS, 100.toJS);
     return video;
   });
   return viewType;
+}
+
+/// Elementos `<video>` creados por las factories para poder liberarlos cuando
+/// el widget desaparece. En Flutter web, si el platform view se desmonta sin
+/// limpiar el elemento, el último frame queda "pegado" sobre el lienzo.
+final Map<String, web.HTMLVideoElement> _elementsByViewType = {};
+
+/// Detiene y limpia el `<video>` de una vista para soltar su último frame.
+void _disposeElement(String viewType) {
+  final video = _elementsByViewType.remove(viewType);
+  if (video == null) return;
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
 }
 
 /// Estado de error por src: avisa a las vistas activas cuando falla la carga.

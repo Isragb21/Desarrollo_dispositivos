@@ -35,21 +35,26 @@ class GameCard extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           transform: focused
-              ? (Matrix4.identity()..scaleByDouble(1.03, 1.03, 1, 1))
+              ? (Matrix4.identity()..scale(1.06, 1.06, 1.0))
               : Matrix4.identity(),
           decoration: BoxDecoration(
             color: TvColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: focused ? TvColors.gold : TvColors.textSecondary,
-              width: focused ? 4 : 2,
+              width: focused ? 6 : 2,
             ),
             boxShadow: focused
                 ? [
                     BoxShadow(
-                      color: TvColors.gold.withValues(alpha: 0.45),
-                      blurRadius: 30,
-                      spreadRadius: 4,
+                      color: TvColors.gold.withValues(alpha: 0.50),
+                      blurRadius: 48,
+                      spreadRadius: 8,
+                    ),
+                    BoxShadow(
+                      color: TvColors.gold.withValues(alpha: 0.18),
+                      blurRadius: 24,
+                      spreadRadius: 2,
                     ),
                   ]
                 : const [],
@@ -72,23 +77,32 @@ class GameCard extends StatelessWidget {
                 ),
                 // Botón de play (estilo preview de video)
                 Center(
-                  child: Container(
-                    width: 64,
-                    height: 64,
+                    child: Container(
+                    width: 72,
+                    height: 72,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: focused
-                          ? TvColors.gold.withValues(alpha: 0.25)
+                          ? TvColors.gold.withValues(alpha: 0.30)
                           : Colors.black.withValues(alpha: 0.45),
                       border: Border.all(
                         color: focused ? TvColors.gold : TvColors.textSecondary,
-                        width: 3,
+                        width: focused ? 4 : 3,
                       ),
+                      boxShadow: focused
+                          ? [
+                              BoxShadow(
+                                color: TvColors.gold.withValues(alpha: 0.28),
+                                blurRadius: 18,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : null,
                     ),
                     child: Icon(
                       Icons.play_arrow_rounded,
                       color: focused ? TvColors.gold : TvColors.textSecondary,
-                      size: 44,
+                      size: 48,
                     ),
                   ),
                 ),

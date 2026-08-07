@@ -33,6 +33,7 @@ class _TvLoginScreenState extends State<TvLoginScreen> {
   _LoginStage _stage = _LoginStage.idle;
   String _message = '';
   String _email = '';
+  Map<String, dynamic>? _user;
   Timer? _poll;
 
   @override
@@ -57,15 +58,16 @@ class _TvLoginScreenState extends State<TvLoginScreen> {
       return;
     }
     setState(() => _stage = _LoginStage.submitting);
-    final pending = await ApiService.loginTv(email, password);
+    final result = await ApiService.loginTv(email, password);
     if (!mounted) return;
-    if (!pending) {
+    if (result == null || result['pending'] != true) {
       setState(() {
         _stage = _LoginStage.error;
         _message = 'Credenciales inválidas o no se pudo iniciar sesión';
       });
       return;
     }
+    _user = result['user'] as Map<String, dynamic>?;
     _email = email;
     setState(() => _stage = _LoginStage.waiting);
     _poll = Timer.periodic(const Duration(seconds: 2), (_) => _checkStatus());
@@ -77,6 +79,10 @@ class _TvLoginScreenState extends State<TvLoginScreen> {
     if (status == 'confirmed') {
       _poll?.cancel();
       setState(() => _stage = _LoginStage.confirmed);
+      // Cierra la pantalla con la sesión ya iniciada.
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      Navigator.of(context).pop(_user);
     } else if (status == 'rejected') {
       _poll?.cancel();
       setState(() {
@@ -357,22 +363,6 @@ class _StatusBox extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Estilos de texto reutilizables (mismo estilo que TvHomeScreen).
-class GoogleFontsStyle {
-  static TextStyle spaceGrotesk(
-    double size, {
-    bool bold = false,
-    Color? color,
-  }) {
-    return TextStyle(
-      color: color ?? TvColors.textPrimary,
-      fontSize: size,
-      fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-      letterSpacing: -0.02,
     );
   }
 }

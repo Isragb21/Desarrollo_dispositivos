@@ -1,10 +1,58 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:web/web.dart' as web;
 import 'package:gamestore_tv/models/game.dart';
+import 'package:gamestore_tv/models/tv_user.dart';
 
 /// Misma API/BD que la app móvil (gamestore_app). Solo lectura (TV).
 class ApiService {
   static const String baseUrl = "http://localhost:3000/api";
+
+  /// Usuario con sesión iniciada en la TV (tras confirmación 2FA).
+  static TvUser? currentUser;
+
+  /// Clave de localStorage donde se guarda la sesión para que sobreviva al
+  /// refrescar la pestaña (se cierra solo con el botón "Cerrar sesión").
+  static const String _sessionKey = 'gamestore_tv_session';
+
+  /// Persiste la sesión actual en localStorage.
+  static void saveSession() {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      web.window.localStorage.setItem(_sessionKey, jsonEncode(user.toJson()));
+    } catch (_) {
+      // localStorage puede fallar (p.ej. navegador con almacenamiento
+      // bloqueado); en ese caso la sesión solo vive mientras dure la pestaña.
+    }
+  }
+
+  /// Restaura la sesión guardada al arrancar la app. Devuelve el usuario o
+  /// null si no hay sesión previa.
+  static TvUser? loadSession() {
+    try {
+      final raw = web.window.localStorage.getItem(_sessionKey);
+      if (raw == null || raw.isEmpty) {
+        currentUser = null;
+      } else {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          currentUser = TvUser.fromJson(decoded);
+        }
+      }
+    } catch (_) {
+      currentUser = null;
+    }
+    return currentUser;
+  }
+
+  /// Cierra sesión y borra la sesión persistida.
+  static void clearSession() {
+    currentUser = null;
+    try {
+      web.window.localStorage.removeItem(_sessionKey);
+    } catch (_) {}
+  }
 
   static String imageUrl(String path) {
     if (path.startsWith('http')) return path;
@@ -89,8 +137,9 @@ class ApiService {
   }
 
   /// Login desde TV: valida credenciales y crea una solicitud 2FA pendiente.
-  /// Devuelve [true] si quedó pendiente de confirmación en el wearable.
-  static Future<bool> loginTv(String email, String password) async {
+  /// Devuelve `{'pending': bool, 'user': {...}}` o `null` si las credenciales
+  /// fallaron o hubo error de red.
+  static Future<Map<String, dynamic>?> loginTv(String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/auth/login-tv"),
@@ -98,12 +147,11 @@ class ApiService {
         body: json.encode({'email': email, 'password': password}),
       );
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['pending'] == true;
+        return json.decode(response.body) as Map<String, dynamic>;
       }
-      return false;
+      return null;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
@@ -119,6 +167,60 @@ class ApiService {
       return 'none';
     } catch (_) {
       return 'none';
+    }
+  }
+
+  /// Perfil completo del usuario (incluye nivel, XP y juegos poseídos).
+  static Future<TvUser?> fetchUser(String id) async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/usuario/$id"));
+      if (response.statusCode == 200) {
+        return TvUser.fromJson(json.decode(response.body));
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Juegos poseídos por el usuario (biblioteca) con datos completos,
+  /// ordenados por calificación. Vacío si no hay sesión o falla la red.
+  static Future<List<Game>> fetchOwnedGames(String userId) async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/biblioteca/$userId"));
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        return data.map((j) => _parseGame(j)).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Edita datos básicos del perfil (gamertag, username, email).
+  static Future<TvUser?> updateProfile({
+    required String id,
+    String? username,
+    String? gamertag,
+    String? email,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse("$baseUrl/usuario/$id"),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          if (username != null) 'username': username,
+          if (gamertag != null) 'gamertag': gamertag,
+          if (email != null) 'email': email,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return TvUser.fromJson(json.decode(response.body));
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 }
