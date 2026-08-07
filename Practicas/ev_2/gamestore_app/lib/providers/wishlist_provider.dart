@@ -16,6 +16,7 @@ class WishlistProvider extends ChangeNotifier {
     for (final game in games) {
       _items[game.id] = game;
     }
+    _pushFavoritesToWearable();
     notifyListeners();
   }
 
@@ -25,11 +26,20 @@ class WishlistProvider extends ChangeNotifier {
       if (ok) {
         _items[game.id] = game;
         _notifyDiscount(game);
+        _pushFavoritesToWearable();
         notifyListeners();
         return true;
       }
     }
     return false;
+  }
+
+  void _pushFavoritesToWearable() {
+    final titles = _items.values
+        .map((g) => g.title)
+        .toList()
+      ..sort();
+    WearableBleService().sendFavorites(games: titles);
   }
 
   void _notifyDiscount(Game game) {
@@ -47,6 +57,7 @@ class WishlistProvider extends ChangeNotifier {
       final ok = await ApiService.removeFromWishlist(gameId);
       if (ok) {
         _items.remove(gameId);
+        _pushFavoritesToWearable();
         notifyListeners();
         return true;
       }

@@ -48,4 +48,14 @@ class GameProvider extends ChangeNotifier {
       return null;
     }
   }
+
+  Game? findGame(String title) {
+    final t = title.trim().toLowerCase();
+    if (t.isEmpty) return null;
+    try {
+      return _games.firstWhere((g) => g.title.trim().toLowerCase() == t);
+    } catch (_) {
+      return null;
+    }
+  }
 }

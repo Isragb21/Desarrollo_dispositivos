@@ -133,6 +133,21 @@ class ApiService {
     }
   }
 
+  /// La oferta activa del momento (publicada por el backend cada 30s).
+  static Future<Map<String, dynamic>?> fetchActiveOffer() async {
+    try {
+      final response = await http
+          .get(Uri.parse("$_baseUrl/ble-relay/discount"))
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200 && response.body != "null") {
+        return Map<String, dynamic>.from(json.decode(response.body));
+      }
+    } catch (e) {
+      // Sin conexión al backend: se ignora.
+    }
+    return null;
+  }
+
   static Future<UserModel?> login(String email, String password) async {
     lastError = null;
     try {

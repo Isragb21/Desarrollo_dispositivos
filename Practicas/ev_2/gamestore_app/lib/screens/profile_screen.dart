@@ -4,6 +4,7 @@ import 'package:gamestore_app/theme/app_theme.dart';
 import 'package:gamestore_app/services/api_service.dart';
 import 'package:gamestore_app/models/user.dart';
 import 'package:gamestore_app/providers/wishlist_provider.dart';
+import 'package:gamestore_app/providers/cart_provider.dart';
 import 'package:gamestore_app/providers/wearable_provider.dart';
 import 'package:gamestore_app/screens/login_screen.dart';
 import 'package:gamestore_app/screens/edit_profile_screen.dart';
@@ -57,6 +58,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildWishlistSection(context, wishlist),
                 const SizedBox(height: 24),
                 _buildSettingsSection(context),
+                const SizedBox(height: 32),
+                _buildLogoutButton(context),
               ],
             ),
           ),
@@ -86,17 +89,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                 );
                 if (edited == true && mounted) _loadUser();
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout, color: AppColors.error),
-              onPressed: () {
-                ApiService.logout();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
               },
             ),
           ],
@@ -293,15 +285,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildWearableSection(BuildContext context) {
     final wearable = context.watch<WearableProvider>();
     final connected = wearable.status == WearableConnectionStatus.connected;
-    final (statusText, statusColor) = switch (wearable.status) {
-      WearableConnectionStatus.searching => ("BUSCANDO...", AppColors.gold),
-      WearableConnectionStatus.connected =>
-        wearable.paired
-            ? ("VINCULADO", AppColors.neonGreen)
-            : ("CONECTADO, SIN VINCULAR", AppColors.blueAccent),
-      WearableConnectionStatus.error => ("ERROR DE CONEXIÓN", AppColors.error),
-      WearableConnectionStatus.disconnected => ("DESCONECTADO", AppColors.error),
-    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -320,51 +303,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.watch_rounded,
-                      color: AppColors.neonGreen, size: 26),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "CONEXIÓN BLE",
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          statusText,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.circle, color: statusColor, size: 12),
-                ],
-              ),
-              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: connected && wearable.paired
-                      ? null
+                  onPressed: connected
+                      ? () => wearable.disconnect()
                       : () => _pairWearable(context),
-                  icon: const Icon(Icons.bluetooth_connected, size: 18),
+                  icon: Icon(
+                    connected ? Icons.link_off : Icons.bluetooth_connected,
+                    size: 18,
+                  ),
                   label: Text(
-                    connected && wearable.paired
-                        ? "WEARABLE VINCULADO"
-                        : "VINCULAR WEARABLE",
+                    connected ? "DESCONECTAR" : "VINCULAR WEARABLE",
                   ),
                 ),
               ),
@@ -396,6 +346,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (wearable.isConnected) {
       await wearable.sendPair(
         games: ApiService.currentUser?.gamesOwned ?? 0,
+      );
+      if (!context.mounted) return;
+      // Muestra el carrito y los favoritos de esta cuenta en el wearable.
+      final cart = context.read<CartProvider>();
+      wearable.sendCart(
+        total: cart.total,
+        count: cart.count,
+        games: cart.items.values.map((g) => g.title).toList(),
+      );
+      final wishlist = context.read<WishlistProvider>();
+      wearable.sendFavorites(
+        games: wishlist.items.values.map((g) => g.title).toList(),
       );
       messenger.showSnackBar(
         const SnackBar(content: Text("Wearable vinculado y desbloqueado")),
@@ -499,6 +461,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _buildDivider(),
         _buildSettingItem(Icons.info_outline, "VERSIÓN", "1.0.0"),
       ],
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: FilledButton.icon(
+        onPressed: () {
+          ApiService.logout();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        },
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.error,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: const Icon(Icons.logout),
+        label: const Text(
+          "CERRAR SESIÓN",
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ),
     );
   }
 

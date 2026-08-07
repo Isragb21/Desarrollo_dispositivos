@@ -11,7 +11,6 @@ import 'package:gamestore_app/screens/cart_screen.dart';
 import 'package:gamestore_app/screens/profile_screen.dart';
 import 'package:gamestore_app/providers/cart_provider.dart';
 import 'package:gamestore_app/providers/wearable_provider.dart';
-import 'package:gamestore_app/widgets/wearable_status_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -151,10 +150,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _syncWearable() {
-    final wearable = context.read<WearableProvider>();
-    wearable.connect();
-
-    // Reenvía el total del carrito al wearable cuando cambie.
+    // BLE es opcional: no se escanea ni se piden permisos al iniciar. La
+    // conexión se establece solo cuando el usuario pulsa "VINCULAR WEARABLE"
+    // en su perfil. Aquí solo se reenvía el carrito cuando ya está conectado.
     context.read<CartProvider>().addListener(_pushCartToWearable);
   }
 
@@ -196,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<WearableProvider>().sendCart(
           total: cart.total,
           count: cart.count,
+          games: cart.items.values.map((g) => g.title).toList(),
         );
   }
 
@@ -222,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          const WearableStatusBar(),
           Expanded(
             child: IndexedStack(
               index: _currentIndex,
