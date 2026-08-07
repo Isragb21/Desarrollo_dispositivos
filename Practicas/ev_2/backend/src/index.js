@@ -9,6 +9,9 @@ const usuarioRoutes = require("./routes/usuario");
 const deseadosRoutes = require("./routes/deseados");
 const pagoRoutes = require("./routes/pago");
 const notificacionesRoutes = require("./routes/notificaciones");
+const bibliotecaRoutes = require("./routes/biblioteca");
+const bleRelayRoutes = require("./routes/ble-relay");
+const offers = require("./offers");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +28,8 @@ app.use("/api/usuario", usuarioRoutes);
 app.use("/api/deseados", deseadosRoutes);
 app.use("/api/pago", pagoRoutes);
 app.use("/api/notificaciones", notificacionesRoutes);
+app.use("/api/biblioteca", bibliotecaRoutes);
+app.use("/api/ble-relay", bleRelayRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -32,4 +37,5 @@ app.get("/api/health", (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`GameStore API corriendo en puerto ${PORT}`);
+  offers.startOffers();
 });

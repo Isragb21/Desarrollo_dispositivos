@@ -77,9 +77,11 @@ router.post("/login-tv", async (req, res) => {
       "INSERT INTO pending_logins (email, status) VALUES ($1, 'pending')",
       [email]
     );
+    const { password: _, ...safeUser } = user;
     res.json({
       pending: true,
       message: "Pendiente de confirmación en el wearable",
+      user: safeUser,
     });
   } catch (err) {
     console.error("Error en POST /auth/login-tv:", err);

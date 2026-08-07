@@ -21,6 +21,12 @@ router.post("/", async (req, res) => {
 
     const totalJuegos = juegos.rows.length;
 
+    // Los juegos del carrito pasan a la biblioteca del usuario (poseidos).
+    await pool.query(
+      "INSERT INTO biblioteca (user_id, juego_id) SELECT user_id, juego_id FROM carrito WHERE user_id = $1 ON CONFLICT DO NOTHING",
+      [user_id]
+    );
+
     await pool.query("DELETE FROM carrito WHERE user_id = $1", [user_id]);
 
     await pool.query(
